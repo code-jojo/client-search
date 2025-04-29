@@ -2,6 +2,7 @@
 
 require_relative "client_search_cli/version"
 require_relative "client_search_cli/cli"
+require_relative "client_search_cli/api_client"
 
 module ClientSearchCli
   class Error < StandardError; end

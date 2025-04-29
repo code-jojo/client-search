@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/client_search_cli"
+
+puts "Testing ShiftCare API Client..."
+api_client = ClientSearchCli::ApiClient.new
+puts "Fetching clients..."
+clients = api_client.fetch_clients
+
+if clients
+  puts "Success! Found #{clients.count} clients"
+  puts "First 3 clients:"
+  clients.first(3).each do |client|
+    puts "- #{client['first_name']} #{client['last_name']}"
+  end
+else
+  puts "Failed to fetch clients"
+end 
