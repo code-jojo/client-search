@@ -10,9 +10,31 @@ clients = api_client.fetch_clients
 
 if clients
   puts "Success! Found #{clients.count} clients"
-  puts "First 3 clients:"
-  clients.first(3).each do |client|
-    puts "- #{client['first_name']} #{client['last_name']}"
+  puts "First 3 clients with details:"
+  clients.first(3).each_with_index do |client, index|
+    puts "Client #{index + 1}:"
+    puts "  ID: #{client['id']}"
+    puts "  First Name: #{client['first_name'].inspect}"
+    puts "  Last Name: #{client['last_name'].inspect}"
+    puts "  Email: #{client['email'].inspect}"
+    puts "  Phone: #{client['phone'].inspect}"
+    puts "---"
+  end
+
+  # Find a client with a non-empty name for testing
+  named_client = clients.find { |c| (c['first_name'] || '').strip != '' || (c['last_name'] || '').strip != '' }
+  
+  if named_client
+    puts "Found client with name: #{named_client['first_name']} #{named_client['last_name']}"
+    puts "Will use this for testing search"
+    
+    search_term = named_client['first_name'] || named_client['last_name']
+    puts "Searching for '#{search_term}'..."
+    
+    search_results = api_client.search_clients_by_name(search_term)
+    puts "Found #{search_results.count} results"
+  else
+    puts "No clients with names found"
   end
 else
   puts "Failed to fetch clients"

@@ -5,12 +5,8 @@ require "httparty"
 module ClientSearchCli
   class ApiClient
     include HTTParty
-    base_uri "https://appassets02.shiftcare.com/manual"
+    base_uri ENV["SHIFTCARE_API_URL"] || "https://appassets02.shiftcare.com/manual"
     format :json
-
-    def initialize
-      # Could add auth options or other configuration here in the future
-    end
 
     def fetch_clients
       response = self.class.get("/clients.json")
@@ -22,10 +18,16 @@ module ClientSearchCli
       return [] unless clients
 
       clients.select do |client|
+        # Try to match on first_name, last_name if present
         first_name = client['first_name'] || ''
         last_name = client['last_name'] || ''
         full_name = "#{first_name} #{last_name}".downcase.strip
-        full_name.include?(name.downcase)
+        
+        # If no name try email
+        email = client['email'] || ''
+        
+        full_name.include?(name.downcase) || 
+          email.downcase.include?(name.downcase)
       end
     end
 

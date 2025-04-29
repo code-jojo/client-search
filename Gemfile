@@ -17,5 +17,8 @@ gem "thor", "~> 1.2"
 # HTTP Client
 gem "httparty", "~> 0.21.0"
 
+# Environment variables
+gem "dotenv", "~> 2.8"
+
 # Standard library gem required by HTTParty in Ruby 3.4+
 gem "csv"

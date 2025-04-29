@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/client_search_cli"
+
+puts "Testing email search..."
+api_client = ClientSearchCli::ApiClient.new
+search_service = ClientSearchCli::ClientSearch.new(api_client)
+
+["gmail", "yahoo", "hotmail"].each do |domain|
+  puts "\nSearching for clients with '#{domain}' in email:"
+  clients = search_service.search_by_name(domain)
+  
+  if clients.empty?
+    puts "No results found"
+  else
+    puts "Found #{clients.size} clients:"
+    clients.each do |client|
+      puts "- #{client.name} (ID: #{client.id})"
+    end
+  end
+end 
