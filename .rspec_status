@@ -1,0 +1,4 @@
+example_id                                    | status | run_time        |
+--------------------------------------------- | ------ | --------------- |
+./spec/client_search_cli/cli_spec.rb[1:1]     | passed | 0.00324 seconds |
+./spec/client_search_cli/version_spec.rb[1:1] | passed | 0.00587 seconds |
