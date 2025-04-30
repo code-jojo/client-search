@@ -22,3 +22,6 @@ gem "dotenv", "~> 2.8"
 
 # Standard library gem required by HTTParty in Ruby 3.4+
 gem "csv"
+
+# Table formatting
+gem "terminal-table", "~> 3.0"
