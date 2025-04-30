@@ -15,21 +15,17 @@ RSpec.describe ClientSearchCli::ClientSearch do
   
   describe "#search_by_name" do
     it "returns clients with names matching search terms" do
-      # Test with a few common names that might be in the database
       ["John", "Smith", "Jane"].each do |search_term|
         clients = search_service.search_by_name(search_term)
         
-        # Validates return type even if no matches found
         expect(clients).to be_an(Array)
         
-        # If we found clients, verify they have the expected structure
         unless clients.empty?
           clients.each do |client|
             expect(client).to be_a(ClientSearchCli::Client)
             expect(client.name).to be_a(String)
             expect(client.id).not_to be_nil
             
-            # Verify that the client's name includes the search term (case insensitive)
             expect(client.name.downcase).to include(search_term.downcase)
           end
         end
@@ -37,7 +33,6 @@ RSpec.describe ClientSearchCli::ClientSearch do
     end
 
     it "returns an empty array when no matches are found" do
-      # Use a random string that's unlikely to match any client
       random_name = "XYZ#{rand(10000)}"
       clients = search_service.search_by_name(random_name)
       expect(clients).to eq([])
@@ -98,86 +93,97 @@ RSpec.describe ClientSearchCli::ClientSearch do
     end
   end
 
-  describe "#search_by_name with options" do
-    it "filters results with exact matching when exact option is true" do
-      allow(api_client).to receive(:search_clients_by_name).and_return(raw_clients)
-      
-      # Search with exact matching
-      clients = search_service.search_by_name("John", exact: true)
-      expect(clients).to be_an(Array)
-      clients.each do |client|
-        # Check parts of the name match exactly
-        name_parts = []
-        name_parts << client.first_name&.downcase if client.first_name
-        name_parts << client.last_name&.downcase if client.last_name
-        name_parts += client.full_name.downcase.split if client.full_name
-        
-        expect(name_parts).to include("john")
-      end
-      
-      # Search with a term that might be part of a name but not an exact match
-      clients = search_service.search_by_name("Jo", exact: true)
-      expect(clients).to be_an(Array)
-      # Since "Jo" is not an exact match for any name part, we expect filtered results
-    end
-    
-    it "limits the number of results when limit option is specified" do
-      allow(api_client).to receive(:search_clients_by_name).and_return(raw_clients)
-      
-      # Test with limit 1
-      clients = search_service.search_by_name("", limit: 1)
-      expect(clients.length).to eq(1)
-      
-      # Test with limit larger than available results
-      clients = search_service.search_by_name("", limit: 10)
-      expect(clients.length).to be <= 10
-      
-      # Test with invalid limit (should not apply limit)
-      clients = search_service.search_by_name("", limit: -1)
-      expect(clients.length).to eq(raw_clients.length)
-    end
-
-    context "with complex options combinations" do
-      let(:extended_clients) do
+  describe "#find_duplicate_emails" do
+    context "when there are duplicate emails" do
+      let(:clients_with_duplicates) do
         [
-          { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },
-          { "id" => 2, "full_name" => "Jane Smith", "email" => "jane@example.com" },
-          { "id" => 3, "full_name" => "John Smith", "email" => "john.smith@example.com" },
-          { "id" => 4, "full_name" => "Johnny Doe", "email" => "johnny@example.com" },
-          { "id" => 5, "full_name" => "John Johnson", "email" => "johnson@example.com" }
+          { "id" => 1, "full_name" => "John Doe", "email" => "duplicate@example.com" },
+          { "id" => 2, "full_name" => "Jane Smith", "email" => "unique@example.com" },
+          { "id" => 3, "full_name" => "Different Name", "email" => "duplicate@example.com" },
+          { "id" => 4, "full_name" => "Another Duplicate", "email" => "another.duplicate@example.com" },
+          { "id" => 5, "full_name" => "Yet Another", "email" => "another.duplicate@example.com" }
         ]
       end
 
       before do
-        allow(api_client).to receive(:search_clients_by_name).with("John").and_return(extended_clients.select { |c| c["full_name"].include?("John") })
+        allow(api_client).to receive(:fetch_clients).and_return(clients_with_duplicates)
       end
 
-      it "applies both exact matching and limit constraints correctly" do
-        # Should match "John Doe", "John Smith", "John Johnson" but not "Johnny Doe"
-        # Then limit to 2 results
-        clients = search_service.search_by_name("John", exact: true, limit: 2)
-        expect(clients).to be_an(Array)
-        expect(clients.size).to eq(2)
+      it "returns a hash of duplicate emails grouped with their clients" do
+        duplicates = search_service.find_duplicate_emails
         
-        # Verify all returned clients have "John" as an exact name part
-        clients.each do |client|
-          name_parts = client.full_name.split
-          expect(name_parts).to include("John")
-        end
+        expect(duplicates).to be_a(Hash)
+        expect(duplicates.keys).to contain_exactly("duplicate@example.com", "another.duplicate@example.com")
+        expect(duplicates["duplicate@example.com"].size).to eq(2)
+        expect(duplicates["another.duplicate@example.com"].size).to eq(2)
+        
+        duplicate_group = duplicates["duplicate@example.com"]
+        expect(duplicate_group.map(&:id)).to contain_exactly(1, 3)
+        expect(duplicate_group.map(&:full_name)).to contain_exactly("John Doe", "Different Name")
+        
+        duplicate_group = duplicates["another.duplicate@example.com"]
+        expect(duplicate_group.map(&:id)).to contain_exactly(4, 5)
+        expect(duplicate_group.map(&:full_name)).to contain_exactly("Another Duplicate", "Yet Another")
+      end
+    end
+
+    context "when there are no duplicate emails" do
+      let(:clients_without_duplicates) do
+        [
+          { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },
+          { "id" => 2, "full_name" => "Jane Smith", "email" => "jane@example.com" },
+          { "id" => 3, "full_name" => "Different Name", "email" => "different@example.com" }
+        ]
       end
 
-      it "handles zero limit without errors" do
-        clients = search_service.search_by_name("John", limit: 0)
-        expect(clients).to be_an(Array)
-        # Since limit <= 0 is invalid, it should return all results
-        expect(clients.size).to eq(4)
+      before do
+        allow(api_client).to receive(:fetch_clients).and_return(clients_without_duplicates)
       end
 
-      it "handles string limit values gracefully" do
-        # Should treat non-numeric limit as invalid and return all results
-        clients = search_service.search_by_name("John", limit: "abc")
-        expect(clients).to be_an(Array)
-        expect(clients.size).to eq(4)
+      it "returns an empty hash" do
+        duplicates = search_service.find_duplicate_emails
+        expect(duplicates).to be_a(Hash)
+        expect(duplicates).to be_empty
+      end
+    end
+
+    context "with edge cases" do
+      it "handles nil or empty emails" do
+        clients_with_nil_emails = [
+          { "id" => 1, "full_name" => "John Doe", "email" => nil },
+          { "id" => 2, "full_name" => "Jane Smith", "email" => "" },
+          { "id" => 3, "full_name" => "Different Name", "email" => nil },
+          { "id" => 4, "full_name" => "Valid Email", "email" => "valid@example.com" }
+        ]
+        
+        allow(api_client).to receive(:fetch_clients).and_return(clients_with_nil_emails)
+        
+        duplicates = search_service.find_duplicate_emails
+        expect(duplicates).to be_a(Hash)
+        expect(duplicates).to be_empty
+      end
+
+      it "handles nil client data" do
+        allow(api_client).to receive(:fetch_clients).and_return(nil)
+        
+        duplicates = search_service.find_duplicate_emails
+        expect(duplicates).to be_a(Hash)
+        expect(duplicates).to be_empty
+      end
+
+      it "handles case insensitivity in emails" do
+        clients_with_case_differences = [
+          { "id" => 1, "full_name" => "John Doe", "email" => "Same@example.com" },
+          { "id" => 2, "full_name" => "Jane Smith", "email" => "same@example.com" },
+          { "id" => 3, "full_name" => "Different Name", "email" => "SAME@EXAMPLE.COM" }
+        ]
+        
+        allow(api_client).to receive(:fetch_clients).and_return(clients_with_case_differences)
+        
+        duplicates = search_service.find_duplicate_emails
+        expect(duplicates).to be_a(Hash)
+        expect(duplicates.keys).to contain_exactly("same@example.com")
+        expect(duplicates["same@example.com"].size).to eq(3)
       end
     end
   end

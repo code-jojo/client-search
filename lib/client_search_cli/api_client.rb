@@ -5,7 +5,7 @@ require "httparty"
 module ClientSearchCli
   class ApiClient
     include HTTParty
-    base_uri ENV["SHIFTCARE_API_URL"]
+    base_uri ENV["SHIFTCARE_API_URL"] || "https://shiftcare-api.example.com"
     format :json
     
     # Fetch clients from the API
@@ -19,10 +19,10 @@ module ClientSearchCli
         puts "Error: Connection refused"
         nil
       rescue Timeout::Error
-        puts "Error: Request timed out"
+        puts "Error: Network timeout"
         nil
       rescue HTTParty::Error => e
-        puts "Error: HTTParty error - #{e.message}"
+        puts "Error: API returned invalid data"
         nil
       rescue StandardError => e
         puts "Error: #{e.message}"
@@ -73,32 +73,7 @@ module ClientSearchCli
       end
     end
 
-    # Transform client data to ensure it has the expected fields
-    #
-    # @param clients [Array<Hash>] The clients from the API
-    # @return [Array<Hash>] The transformed clients
-    def transform_client_data(clients)
-      return [] unless clients.is_a?(Array)
-      
-      clients.map do |client|
-        # Skip if client is not a hash
-        next {} unless client.is_a?(Hash)
-        
-        # Extract first and last name from full_name if needed
-        if client['full_name'] && (!client['first_name'] || !client['last_name'])
-          names = client['full_name'].to_s.split
-          client['first_name'] = names.first
-          client['last_name'] = names[1..-1]&.join(' ')
-        end
-        
-        # Ensure phone field exists
-        client['phone'] = client['phone'] || ''
-        
-        client
-      end.compact
-    end
-
-    # Handle the error from the API
+    # Handle errors from the API
     #
     # @param response [HTTParty::Response] The response
     # @return [void]
@@ -110,10 +85,23 @@ module ClientSearchCli
         puts "Error: Unauthorized access (401)"
       when 403
         puts "Error: Forbidden access (403)"
-      when 500..599
-        puts "Error: Server error (#{response.code})"
+      when 500
+        puts "Error: Server error (500)"
       else
-        puts "Error: Request failed with code #{response.code}"
+        puts "Error: API Error: #{response.code} - #{response.message}"
+      end
+    end
+
+    # Transform client data to ensure it has the expected fields
+    #
+    # @param clients [Array<Hash>] The clients from the API
+    # @return [Array<Hash>] The transformed clients
+    def transform_client_data(clients)
+      clients = [clients] unless clients.is_a?(Array)
+      
+      clients.map do |client|
+        client_data = client.transform_keys(&:to_s)
+        client_data
       end
     end
   end

@@ -15,36 +15,24 @@ module ClientSearchCli
       # Convert nil query to empty string to avoid errors
       query = query.to_s
       raw_clients = @api_client.search_clients_by_name(query)
-      
-      # Create client objects
-      clients = raw_clients.map { |data| Client.new(data) }
-      
-      # Apply exact filtering if needed
-      if options[:exact]
-        query_downcase = query.downcase
-        clients = clients.select do |client|
-          # Check for exact match in first_name, last_name, or full_name parts
-          name_parts = []
-          name_parts << client.first_name&.downcase if client.first_name
-          name_parts << client.last_name&.downcase if client.last_name
-          
-          # Also check each word in the full name
-          if client.full_name
-            name_parts += client.full_name.downcase.split
-          end
-          
-          name_parts.any? { |part| part == query_downcase }
-        end
-      end
-      
-      # Apply limit if specified and valid
-      limit = options[:limit]
-      if limit && limit.is_a?(Integer) && limit > 0
-        clients = clients.take(limit)
-      end
-      
-      clients
+      raw_clients.map { |data| Client.new(data) }
     end
     
+    # Find clients with duplicate emails in the dataset
+    #
+    # @return [Hash<String, Array<Client>>] Hash of duplicate emails with associated clients
+    def find_duplicate_emails
+      raw_clients = @api_client.fetch_clients
+      return {} unless raw_clients
+      
+      clients = raw_clients.map { |data| Client.new(data) }
+      
+      # Group clients by email, filtering out nil/empty emails
+      email_groups = clients.reject { |c| c.email.nil? || c.email.empty? }
+                            .group_by { |client| client.email.downcase }
+      
+      # Select only groups with more than one client (duplicates)
+      email_groups.select { |_, client_group| client_group.size > 1 }
+    end
   end
 end 

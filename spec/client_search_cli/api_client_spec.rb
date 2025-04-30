@@ -12,7 +12,6 @@ RSpec.describe ClientSearchCli::ApiClient do
       expect(clients).to be_an(Array)
       expect(clients.size).to be > 0
       
-      # Check structure of returned client data
       sample_client = clients.first
       expect(sample_client).to include("id", "full_name", "email")
     end
@@ -50,17 +49,14 @@ RSpec.describe ClientSearchCli::ApiClient do
 
   describe "#search_clients_by_name" do
     it "returns matching clients when searching by name" do
-      # First get a client with a name to search for
       clients = api_client.fetch_clients
       named_client = clients.find { |c| (c["full_name"] || "").strip != "" }
       
-      # Skip if no named clients found
       if named_client
         search_term = named_client["full_name"]
         search_results = api_client.search_clients_by_name(search_term)
         
         expect(search_results).to be_an(Array)
-        # At least one result should be returned (the client we're searching for)
         expect(search_results.size).to be >= 1
       else
         skip "No clients with names found for testing search"
@@ -86,7 +82,6 @@ RSpec.describe ClientSearchCli::ApiClient do
       it "handles empty search terms" do
         results = api_client.search_clients_by_name("")
         expect(results).to be_an(Array)
-        # Empty search term should return all clients since all names include ""
         expect(results.size).to eq(mock_clients.size)
       end
 
@@ -134,58 +129,18 @@ RSpec.describe ClientSearchCli::ApiClient do
   end
 
   describe "#transform_client_data" do
-    # Access private method for testing
     let(:transformed_data) { api_client.send(:transform_client_data, raw_data) }
 
     context "with complete data" do
       let(:raw_data) do
-        [{ "id" => 1, "full_name" => "John Doe", "first_name" => "John", "last_name" => "Doe", "email" => "john@example.com", "phone" => "123456789" }]
+        [{ "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" }]
       end
 
       it "keeps existing data intact" do
         expect(transformed_data.first).to include(
           "id" => 1,
           "full_name" => "John Doe",
-          "first_name" => "John",
-          "last_name" => "Doe",
-          "email" => "john@example.com",
-          "phone" => "123456789"
-        )
-      end
-    end
-
-    context "with incomplete data" do
-      let(:raw_data) do
-        [{ "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" }]
-      end
-
-      it "extracts first and last names from full_name" do
-        expect(transformed_data.first).to include(
-          "first_name" => "John",
-          "last_name" => "Doe"
-        )
-      end
-    end
-
-    context "with missing phone data" do
-      let(:raw_data) do
-        [{ "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" }]
-      end
-
-      it "ensures phone field exists" do
-        expect(transformed_data.first).to include("phone" => "")
-      end
-    end
-
-    context "with multi-word last names" do
-      let(:raw_data) do
-        [{ "id" => 1, "full_name" => "John van der Waals", "email" => "john@example.com" }]
-      end
-
-      it "correctly handles multi-word last names" do
-        expect(transformed_data.first).to include(
-          "first_name" => "John",
-          "last_name" => "van der Waals"
+          "email" => "john@example.com"
         )
       end
     end
