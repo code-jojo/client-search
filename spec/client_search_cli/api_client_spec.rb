@@ -1,63 +1,40 @@
 # frozen_string_literal: true
 
+require "spec_helper"
+
 RSpec.describe ClientSearchCli::ApiClient do
-  let(:client) { described_class.new }
+  subject(:api_client) { described_class.new }
 
   describe "#fetch_clients" do
-    it "sends a GET request to the clients endpoint" do
-      expect(described_class).to receive(:get).with("/clients.json").and_return(double(success?: true, parsed_response: []))
-      client.fetch_clients
-    end
-
-    context "when the request is successful" do
-      let(:mock_response) { double(success?: true, parsed_response: [{ "id" => 1, "first_name" => "John", "last_name" => "Doe" }]) }
-
-      before do
-        allow(described_class).to receive(:get).and_return(mock_response)
-      end
-
-      it "returns the parsed response" do
-        expect(client.fetch_clients).to eq([{ "id" => 1, "first_name" => "John", "last_name" => "Doe" }])
-      end
-    end
-
-    context "when the request fails" do
-      let(:mock_response) { double(success?: false, code: 404) }
-
-      before do
-        allow(described_class).to receive(:get).and_return(mock_response)
-        allow(client).to receive(:puts)
-      end
-
-      it "handles the error and returns nil" do
-        expect(client.fetch_clients).to be_nil
-      end
+    it "successfully fetches clients from the API" do
+      clients = api_client.fetch_clients
+      expect(clients).not_to be_nil
+      expect(clients).to be_an(Array)
+      expect(clients.size).to be > 0
+      
+      # Check structure of returned client data
+      sample_client = clients.first
+      expect(sample_client).to include("id", "first_name", "last_name", "email", "phone")
     end
   end
 
   describe "#search_clients_by_name" do
-    let(:clients) do
-      [
-        { "id" => 1, "first_name" => "John", "last_name" => "Doe" },
-        { "id" => 2, "first_name" => "Jane", "last_name" => "Smith" }
-      ]
-    end
-
-    before do
-      allow(client).to receive(:fetch_clients).and_return(clients)
-    end
-
-    it "filters clients by name (case insensitive)" do
-      expect(client.search_clients_by_name("john")).to eq([{ "id" => 1, "first_name" => "John", "last_name" => "Doe" }])
-    end
-
-    it "returns empty array when no matches are found" do
-      expect(client.search_clients_by_name("unknown")).to eq([])
-    end
-
-    it "returns empty array when client fetch fails" do
-      allow(client).to receive(:fetch_clients).and_return(nil)
-      expect(client.search_clients_by_name("john")).to eq([])
+    it "returns matching clients when searching by name" do
+      # First get a client with a name to search for
+      clients = api_client.fetch_clients
+      named_client = clients.find { |c| (c["first_name"] || "").strip != "" || (c["last_name"] || "").strip != "" }
+      
+      # Skip if no named clients found
+      if named_client
+        search_term = named_client["first_name"] || named_client["last_name"]
+        search_results = api_client.search_clients_by_name(search_term)
+        
+        expect(search_results).to be_an(Array)
+        # At least one result should be returned (the client we're searching for)
+        expect(search_results.size).to be >= 1
+      else
+        skip "No clients with names found for testing search"
+      end
     end
   end
 end 

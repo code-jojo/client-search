@@ -9,8 +9,11 @@ module ClientSearchCli
   class CLI < Thor
     desc "search NAME", "Search for clients by name"
     method_option :format, type: :string, default: "table", desc: "Output format (table, json, csv)"
-    method_option :limit, type: :numeric, desc: "Maximum number of results to return"
-    method_option :exact, type: :boolean, default: false, desc: "Require exact name match"
+
+    # Search for clients by name
+    #
+    # @param name [String] The name to search for
+    # @return [void]
     def search(name)
       puts "Searching for clients with name: #{name}"
       
@@ -18,11 +21,7 @@ module ClientSearchCli
         api_client = ApiClient.new
         search_service = ClientSearch.new(api_client)
         
-        search_options = {}
-        search_options[:limit] = options[:limit] if options[:limit]
-        search_options[:exact] = true if options[:exact]
-        
-        clients = search_service.search_by_name(name, search_options)
+        clients = search_service.search_by_name(name)
         
         if clients.empty?
           puts "No clients found matching name '#{name}'"
@@ -42,6 +41,11 @@ module ClientSearchCli
     
     private
     
+    # Display clients in the specified format
+    #
+    # @param clients [Array<Client>] The clients to display
+    # @param format [String] The format to display the clients in
+    # @return [String] The formatted string
     def display_clients(clients, format)
       case format.downcase
       when "json"
@@ -53,52 +57,60 @@ module ClientSearchCli
       end
     end
     
+    # Display clients as a table
+    #
+    # @param clients [Array<Client>] The clients to display
+    # @return [String] The table string
     def display_as_table(clients)
       puts "Found #{clients.size} client(s):"
       
       begin
         require "terminal-table"
         table = Terminal::Table.new do |t|
-          t.headings = ['ID', 'Name', 'Email', 'Phone', 'Address', 'Notes']
+          t.headings = ['ID', 'Full Name', 'Email']
           
           clients.each do |client|
             t.add_row [
               client.id,
-              client.name,
+              client.full_name,
               client.email || 'N/A',
-              client.phone || 'N/A',
-              client.address || 'N/A',
-              client.notes.to_s.empty? ? 'N/A' : client.notes[0..30] + (client.notes.length > 30 ? '...' : '')
             ]
           end
         end
         
         puts table
       rescue LoadError, NameError => e
-        puts "ID\tName\tEmail\tPhone\tAddress\tNotes"
+        puts "ID\tFull Name\tEmail"
         puts "-" * 80
         
         clients.each do |client|
-          notes_display = client.notes.to_s.empty? ? 'N/A' : client.notes[0..30] + (client.notes.length > 30 ? '...' : '')
-          puts "#{client.id}\t#{client.name}\t#{client.email || 'N/A'}\t#{client.phone || 'N/A'}\t#{client.address || 'N/A'}\t#{notes_display}"
+          puts "#{client.id}\t#{client.full_name}\t#{client.email || 'N/A'}"
         end
       end
     end
     
+    # Display clients as JSON
+    #
+    # @param clients [Array<Client>] The clients to display
+    # @return [String] The JSON string
     def display_as_json(clients)
       require "json"
       client_data = clients.map(&:to_h)
       puts JSON.pretty_generate(client_data)
     end
     
+    # Display clients as CSV
+    #
+    # @param clients [Array<Client>] The clients to display
+    # @return [String] The CSV string
     def display_as_csv(clients)
       require "csv"
-      headers = ["ID", "Name", "Email", "Phone", "Address", "Notes"]
+      headers = ["ID", "Full Name", "Email"]
       
       csv_string = CSV.generate do |csv|
         csv << headers
         clients.each do |client|
-          csv << [client.id, client.name, client.email, client.phone, client.address, client.notes]
+          csv << [client.id, client.full_name, client.email]
         end
       end
       

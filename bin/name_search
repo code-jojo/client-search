@@ -1,15 +1,18 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
+#
+# Manual testing script for client name search
+# For automated tests, see spec/client_search_cli/client_search_spec.rb
 
 require_relative "../lib/client_search_cli"
 
-puts "Testing email search..."
+puts "Testing name search..."
 api_client = ClientSearchCli::ApiClient.new
 search_service = ClientSearchCli::ClientSearch.new(api_client)
 
-["gmail", "yahoo", "hotmail"].each do |domain|
-  puts "\nSearching for clients with '#{domain}' in email:"
-  clients = search_service.search_by_name(domain)
+["John", "Smith", "Jane"].each do |name|
+  puts "\nSearching for clients with name containing '#{name}':"
+  clients = search_service.search_by_name(name)
   
   if clients.empty?
     puts "No results found"

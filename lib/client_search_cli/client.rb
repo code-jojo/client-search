@@ -2,47 +2,54 @@
 
 module ClientSearchCli
   class Client
-    attr_reader :id, :first_name, :last_name, :email, :phone, :address, :notes
+    attr_reader :id, :full_name, :email, :first_name, :last_name
 
+    # Initialize the client
+    #
+    # @param data [Hash] The data
+    # @return [void]
     def initialize(data)
       @id = data["id"]
-      @first_name = data["first_name"] || ""
-      @last_name = data["last_name"] || ""
+      @first_name = data["first_name"]
+      @last_name = data["last_name"]
+      @full_name = data["full_name"] || 
+                   [@first_name, @last_name].compact.join(" ")
       @email = data["email"]
-      @phone = data["phone"]
-      @address = generate_address(data)
-      @notes = data["notes"]
     end
 
+    # Get the name of the client
+    #
+    # @return [String] The name
     def name
-      name = "#{first_name} #{last_name}".strip
-      # If no name available, use email as display name
+      name = "#{full_name}".strip
       name.empty? && email ? email : name
     end
 
+    # Get the first name of the client
+    #
+    # @return [String] The first name
+    def first_name
+      @first_name ||= full_name.to_s.split.first
+    end
+
+    # Get the last name of the client
+    #
+    # @return [String] The last name
+    def last_name
+      @last_name ||= full_name.to_s.split[1..-1]&.join(" ")
+    end
+
+    # Get the hash of the client
+    #
+    # @return [Hash] The hash
     def to_h
       {
         id: id,
-        name: name,
+        full_name: full_name,
         first_name: first_name,
         last_name: last_name,
         email: email,
-        phone: phone,
-        address: address,
-        notes: notes
       }
-    end
-
-    private
-
-    def generate_address(data)
-      address_parts = []
-      address_parts << data["address"] if data["address"]
-      address_parts << data["suburb"] if data["suburb"]
-      address_parts << data["state"] if data["state"]
-      address_parts << data["postcode"] if data["postcode"]
-      
-      address_parts.join(", ")
     end
   end
 end 

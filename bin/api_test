@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
+#
+# Manual testing script for API client
+# For automated tests, see spec/client_search_cli/api_client_spec.rb
 
 require_relative "../lib/client_search_cli"
 
