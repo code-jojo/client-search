@@ -7,6 +7,10 @@ require "terminal-table"
 
 module ClientSearchCli
   class CLI < Thor
+    def self.exit_on_failure?
+      true
+    end
+
     desc "search NAME", "Search for clients by name"
     method_option :format, type: :string, default: "table", desc: "Output format (table, json, csv)"
 
