@@ -21,8 +21,17 @@ module ClientSearchCli
       if options[:exact]
         query_downcase = query.downcase
         clients = clients.select do |client|
-          client.first_name&.downcase == query_downcase || 
-          client.last_name&.downcase == query_downcase
+          # Check for exact match in first_name, last_name, or full_name parts
+          name_parts = []
+          name_parts << client.first_name&.downcase if client.first_name
+          name_parts << client.last_name&.downcase if client.last_name
+          
+          # Also check each word in the full name
+          if client.full_name
+            name_parts += client.full_name.downcase.split
+          end
+          
+          name_parts.any? { |part| part == query_downcase }
         end
       end
       

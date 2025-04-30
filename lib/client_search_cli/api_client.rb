@@ -51,10 +51,30 @@ module ClientSearchCli
     # @return [Array<Hash>] The clients 
     def handle_response(response)
       if response.success?
-        response.parsed_response
+        transform_client_data(response.parsed_response)
       else
         handle_error(response)
         nil
+      end
+    end
+
+    # Transform client data to ensure it has the expected fields
+    #
+    # @param clients [Array<Hash>] The clients from the API
+    # @return [Array<Hash>] The transformed clients
+    def transform_client_data(clients)
+      clients.map do |client|
+        # Extract first and last name from full_name if needed
+        if client['full_name'] && (!client['first_name'] || !client['last_name'])
+          names = client['full_name'].to_s.split
+          client['first_name'] = names.first
+          client['last_name'] = names[1..-1]&.join(' ')
+        end
+        
+        # Ensure phone field exists
+        client['phone'] = client['phone'] || ''
+        
+        client
       end
     end
 

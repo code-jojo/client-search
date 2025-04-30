@@ -14,7 +14,7 @@ RSpec.describe ClientSearchCli::ApiClient do
       
       # Check structure of returned client data
       sample_client = clients.first
-      expect(sample_client).to include("id", "first_name", "last_name", "email", "phone")
+      expect(sample_client).to include("id", "full_name", "email")
     end
   end
 
@@ -22,11 +22,11 @@ RSpec.describe ClientSearchCli::ApiClient do
     it "returns matching clients when searching by name" do
       # First get a client with a name to search for
       clients = api_client.fetch_clients
-      named_client = clients.find { |c| (c["first_name"] || "").strip != "" || (c["last_name"] || "").strip != "" }
+      named_client = clients.find { |c| (c["full_name"] || "").strip != "" }
       
       # Skip if no named clients found
       if named_client
-        search_term = named_client["first_name"] || named_client["last_name"]
+        search_term = named_client["full_name"]
         search_results = api_client.search_clients_by_name(search_term)
         
         expect(search_results).to be_an(Array)
