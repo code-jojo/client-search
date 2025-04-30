@@ -63,6 +63,14 @@ You can specify different output formats:
   client_search search "John Doe" --format=csv
   ```
 
+### Duplicate Email Detection
+Identify and list duplicate email records:
+```
+client_search duplicates
+```
+
+This command finds duplicate emails in the dataset.
+
 ### Version Information
 Display the current version:
 ```
