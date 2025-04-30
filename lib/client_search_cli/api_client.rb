@@ -5,7 +5,7 @@ require "httparty"
 module ClientSearchCli
   class ApiClient
     include HTTParty
-    base_uri ENV["SHIFTCARE_API_URL"] || "https://shiftcare-api.example.com"
+    base_uri ENV["SHIFTCARE_API_URL"] || "https://appassets02.shiftcare.com/manual"
     format :json
     
     # Fetch clients from the API
