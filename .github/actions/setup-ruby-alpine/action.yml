@@ -1,0 +1,26 @@
+name: 'Setup Ruby Alpine'
+description: 'Sets up Ruby in an Alpine container with caching'
+inputs:
+  bundler-version:
+    description: 'The version of bundler to install'
+    default: '2.4.22'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cache gems
+      uses: actions/cache@v3
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-alpine-gems-${{ hashFiles('**/Gemfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-alpine-gems-
+    
+    - name: Install dependencies
+      shell: sh
+      run: |
+        apk add --no-cache build-base git
+        gem install bundler -v '${{ inputs.bundler-version }}'
+        bundle config set --local path 'vendor/bundle'
+        bundle install --jobs 4 --retry 3 

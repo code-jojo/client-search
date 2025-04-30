@@ -3,67 +3,91 @@
 require "httparty"
 
 module ClientSearchCli
+  # API client for interacting with the client search service
+  # Handles fetching clients and searching by various criteria
   class ApiClient
     include HTTParty
     base_uri ENV["SHIFTCARE_API_URL"] || "https://appassets02.shiftcare.com/manual"
     format :json
-    
-    # Fetch clients from the API
-    #
-    # @return [Array<Hash>] The clients
-    def fetch_clients
-      begin
-        response = self.class.get("/clients.json")
-        handle_response(response)
-      rescue Errno::ECONNREFUSED
-        puts "Error: Connection refused"
-        nil
-      rescue Timeout::Error
-        puts "Error: Network timeout"
-        nil
-      rescue HTTParty::Error => e
-        puts "Error: API returned invalid data"
-        nil
-      rescue StandardError => e
-        puts "Error: #{e.message}"
-        nil
-      end
-    end
-    
-    # Search for clients by name
-    #
-    # @param name [String] The name to search for
-    # @return [Array<Hash>] The clients
-    def search_clients_by_name(name)
-      clients = fetch_clients
-      return [] unless clients
 
-      # Handle nil search query
-      search_query = name.to_s.downcase
-      search_terms = search_query.split
-      
-      clients.select do |client|
-        full_name = client['full_name']&.downcase || ''
-        email = client['email']&.downcase || ''
-        
-        if search_terms.size > 1
-          # For multi-word searches, all terms must be in the full name
-          search_terms.all? { |term| full_name.include?(term) }
-        else
-          # For single-word searches, only match complete words
-          name_parts = full_name.split
-          name_parts.any? { |part| part == search_query } || 
-            email.include?(search_query)
-        end
+    # Fetch clients from the API
+    def fetch_clients
+      response = self.class.get("/clients.json")
+      handle_response(response)
+    rescue Errno::ECONNREFUSED
+      puts "Error: Connection refused"
+      nil
+    rescue Timeout::Error
+      puts "Error: Network timeout"
+      nil
+    rescue HTTParty::Error
+      puts "Error: API returned invalid data"
+      nil
+    rescue StandardError => e
+      puts "Error: #{e.message}"
+      nil
+    end
+
+    # Search for clients by name
+    def search_clients_by_name(name)
+      return [] if name.nil? || name.strip.empty?
+
+      search_query = name.downcase.strip
+      # Split the search query into parts
+      search_parts = search_query.split(/\s+/)
+
+      clients = fetch_clients
+      filter_clients_by_name(clients, search_query, search_parts)
+    end
+
+    # Find duplicate clients based on email
+    def find_duplicate_emails
+      clients = fetch_clients.map { |client| Client.new(client) }
+
+      # Group clients by email
+      clients_by_email = clients.group_by(&:email)
+
+      # Filter out nil/empty emails and groups with only one client
+      clients_by_email.select do |email, clients_with_email|
+        email && !email.empty? && clients_with_email.length > 1
       end
     end
 
     private
 
-    # Handle the response from the API
-    #
-    # @param response [HTTParty::Response] The response
-    # @return [Array<Hash>] The clients 
+    def filter_clients_by_name(clients, search_query, search_parts)
+      clients.select do |client|
+        client_matches_search?(client, search_query, search_parts)
+      end
+    end
+
+    def client_matches_search?(client, search_query, search_parts)
+      full_name = client["full_name"]&.downcase || ""
+      email = client["email"]&.downcase || ""
+
+      exact_match?(full_name, search_query) ||
+        name_parts_match?(full_name, search_parts) ||
+        email_match?(email, search_query)
+    end
+
+    def exact_match?(full_name, search_query)
+      full_name == search_query
+    end
+
+    def name_parts_match?(full_name, search_parts)
+      name_parts = full_name.split(/\s+/)
+
+      name_parts.any? do |name_part|
+        search_parts.any? do |search_part|
+          name_part == search_part || name_part.start_with?(search_part)
+        end
+      end
+    end
+
+    def email_match?(email, search_query)
+      email.include?(search_query)
+    end
+
     def handle_response(response)
       if response.success?
         transform_client_data(response.parsed_response)
@@ -73,10 +97,6 @@ module ClientSearchCli
       end
     end
 
-    # Handle errors from the API
-    #
-    # @param response [HTTParty::Response] The response
-    # @return [void]
     def handle_error(response)
       case response.code
       when 404
@@ -92,17 +112,13 @@ module ClientSearchCli
       end
     end
 
-    # Transform client data to ensure it has the expected fields
-    #
-    # @param clients [Array<Hash>] The clients from the API
-    # @return [Array<Hash>] The transformed clients
     def transform_client_data(clients)
       clients = [clients] unless clients.is_a?(Array)
-      
+
       clients.map do |client|
         client_data = client.transform_keys(&:to_s)
         client_data
       end
     end
   end
-end 
+end

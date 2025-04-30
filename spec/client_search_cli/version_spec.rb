@@ -6,4 +6,4 @@ RSpec.describe ClientSearchCli::VERSION do
     expect(ClientSearchCli::VERSION).to be_a(String)
     expect(ClientSearchCli::VERSION).to match(/\d+\.\d+\.\d+/)
   end
-end 
+end

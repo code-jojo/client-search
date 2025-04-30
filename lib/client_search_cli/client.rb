@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
 module ClientSearchCli
+  # Represents a client entity with identification and contact information
+  # Provides methods for initialization from various data sources and serialization
   class Client
     attr_reader :id, :full_name, :email
 
-    # Initialize the client
-    #
-    # @param data [Hash] The data
-    # @return [void]
     def initialize(data)
       data ||= {}
       @id = data["id"]
@@ -15,23 +13,17 @@ module ClientSearchCli
       @email = data["email"]
     end
 
-    # Get the name of the client
-    #
-    # @return [String] The name
     def name
-      name = "#{full_name}".strip
+      name = full_name.to_s.strip
       name.empty? && email ? email : name
     end
 
-    # Get the hash of the client
-    #
-    # @return [Hash] The hash
     def to_h
       {
         id: id,
         full_name: full_name,
-        email: email,
+        email: email
       }
     end
   end
-end 
+end

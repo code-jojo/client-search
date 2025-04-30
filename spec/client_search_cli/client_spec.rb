@@ -15,7 +15,7 @@ RSpec.describe ClientSearchCli::Client do
 
       it "correctly initializes attributes" do
         client = described_class.new(client_data)
-        
+
         expect(client.id).to eq(1)
         expect(client.full_name).to eq("John Doe")
         expect(client.email).to eq("john@example.com")
@@ -29,7 +29,7 @@ RSpec.describe ClientSearchCli::Client do
 
       it "handles missing name attributes" do
         client = described_class.new(client_data)
-        
+
         expect(client.id).to eq(2)
         expect(client.email).to eq("jane@example.com")
         expect(client.full_name).to eq("")
@@ -46,7 +46,7 @@ RSpec.describe ClientSearchCli::Client do
 
       it "handles empty input data" do
         client = described_class.new({})
-        
+
         expect(client.id).to be_nil
         expect(client.full_name).to eq("")
         expect(client.email).to be_nil
@@ -54,7 +54,7 @@ RSpec.describe ClientSearchCli::Client do
 
       it "handles empty string values" do
         client = described_class.new({ "full_name" => "", "email" => "" })
-        
+
         expect(client.full_name).to eq("")
         expect(client.email).to eq("")
       end
@@ -90,10 +90,10 @@ RSpec.describe ClientSearchCli::Client do
         "full_name" => "John Doe",
         "email" => "john@example.com"
       }
-      
+
       client = described_class.new(client_data)
       client_hash = client.to_h
-      
+
       expect(client_hash).to include(
         id: 1,
         full_name: "John Doe",
@@ -104,7 +104,7 @@ RSpec.describe ClientSearchCli::Client do
     it "includes nil values for missing attributes" do
       client = described_class.new({ "id" => 1 })
       client_hash = client.to_h
-      
+
       expect(client_hash).to include(
         id: 1,
         full_name: "",
@@ -112,4 +112,4 @@ RSpec.describe ClientSearchCli::Client do
       )
     end
   end
-end 
+end

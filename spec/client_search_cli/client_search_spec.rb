@@ -5,39 +5,39 @@ require "spec_helper"
 RSpec.describe ClientSearchCli::ClientSearch do
   let(:api_client) { ClientSearchCli::ApiClient.new }
   subject(:search_service) { described_class.new(api_client) }
-  
+
   let(:raw_clients) do
     [
       { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },
       { "id" => 2, "full_name" => "Jane Smith", "email" => "jane@example.com" }
     ]
   end
-  
+
   describe "#search_by_name" do
     it "returns clients with names matching search terms" do
-      ["John", "Smith", "Jane"].each do |search_term|
+      %w[John Smith Jane].each do |search_term|
         clients = search_service.search_by_name(search_term)
-        
+
         expect(clients).to be_an(Array)
-        
-        unless clients.empty?
-          clients.each do |client|
-            expect(client).to be_a(ClientSearchCli::Client)
-            expect(client.name).to be_a(String)
-            expect(client.id).not_to be_nil
-            
-            expect(client.name.downcase).to include(search_term.downcase)
-          end
+
+        next if clients.empty?
+
+        clients.each do |client|
+          expect(client).to be_a(ClientSearchCli::Client)
+          expect(client.name).to be_a(String)
+          expect(client.id).not_to be_nil
+
+          expect(client.name.downcase).to include(search_term.downcase)
         end
       end
     end
 
     it "returns an empty array when no matches are found" do
-      random_name = "XYZ#{rand(10000)}"
+      random_name = "XYZ#{rand(10_000)}"
       clients = search_service.search_by_name(random_name)
       expect(clients).to eq([])
     end
-    
+
     context "with edge case inputs" do
       let(:mock_clients) do
         [
@@ -111,16 +111,16 @@ RSpec.describe ClientSearchCli::ClientSearch do
 
       it "returns a hash of duplicate emails grouped with their clients" do
         duplicates = search_service.find_duplicate_emails
-        
+
         expect(duplicates).to be_a(Hash)
         expect(duplicates.keys).to contain_exactly("duplicate@example.com", "another.duplicate@example.com")
         expect(duplicates["duplicate@example.com"].size).to eq(2)
         expect(duplicates["another.duplicate@example.com"].size).to eq(2)
-        
+
         duplicate_group = duplicates["duplicate@example.com"]
         expect(duplicate_group.map(&:id)).to contain_exactly(1, 3)
         expect(duplicate_group.map(&:full_name)).to contain_exactly("John Doe", "Different Name")
-        
+
         duplicate_group = duplicates["another.duplicate@example.com"]
         expect(duplicate_group.map(&:id)).to contain_exactly(4, 5)
         expect(duplicate_group.map(&:full_name)).to contain_exactly("Another Duplicate", "Yet Another")
@@ -155,9 +155,9 @@ RSpec.describe ClientSearchCli::ClientSearch do
           { "id" => 3, "full_name" => "Different Name", "email" => nil },
           { "id" => 4, "full_name" => "Valid Email", "email" => "valid@example.com" }
         ]
-        
+
         allow(api_client).to receive(:fetch_clients).and_return(clients_with_nil_emails)
-        
+
         duplicates = search_service.find_duplicate_emails
         expect(duplicates).to be_a(Hash)
         expect(duplicates).to be_empty
@@ -165,7 +165,7 @@ RSpec.describe ClientSearchCli::ClientSearch do
 
       it "handles nil client data" do
         allow(api_client).to receive(:fetch_clients).and_return(nil)
-        
+
         duplicates = search_service.find_duplicate_emails
         expect(duplicates).to be_a(Hash)
         expect(duplicates).to be_empty
@@ -177,9 +177,9 @@ RSpec.describe ClientSearchCli::ClientSearch do
           { "id" => 2, "full_name" => "Jane Smith", "email" => "same@example.com" },
           { "id" => 3, "full_name" => "Different Name", "email" => "SAME@EXAMPLE.COM" }
         ]
-        
+
         allow(api_client).to receive(:fetch_clients).and_return(clients_with_case_differences)
-        
+
         duplicates = search_service.find_duplicate_emails
         expect(duplicates).to be_a(Hash)
         expect(duplicates.keys).to contain_exactly("same@example.com")
@@ -187,4 +187,4 @@ RSpec.describe ClientSearchCli::ClientSearch do
       end
     end
   end
-end 
+end

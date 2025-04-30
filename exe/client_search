@@ -4,4 +4,4 @@
 require "client_search_cli"
 
 # Start the CLI
-ClientSearchCli::CLI.start(ARGV) 
+ClientSearchCli::CLI.start(ARGV)
