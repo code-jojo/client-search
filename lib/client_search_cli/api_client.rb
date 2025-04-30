@@ -12,8 +12,22 @@ module ClientSearchCli
     #
     # @return [Array<Hash>] The clients
     def fetch_clients
-      response = self.class.get("/clients.json")
-      handle_response(response)
+      begin
+        response = self.class.get("/clients.json")
+        handle_response(response)
+      rescue Errno::ECONNREFUSED
+        puts "Error: Connection refused"
+        nil
+      rescue Timeout::Error
+        puts "Error: Request timed out"
+        nil
+      rescue HTTParty::Error => e
+        puts "Error: HTTParty error - #{e.message}"
+        nil
+      rescue StandardError => e
+        puts "Error: #{e.message}"
+        nil
+      end
     end
     
     # Search for clients by name
@@ -24,7 +38,8 @@ module ClientSearchCli
       clients = fetch_clients
       return [] unless clients
 
-      search_query = name.downcase
+      # Handle nil search query
+      search_query = name.to_s.downcase
       search_terms = search_query.split
       
       clients.select do |client|
@@ -63,7 +78,12 @@ module ClientSearchCli
     # @param clients [Array<Hash>] The clients from the API
     # @return [Array<Hash>] The transformed clients
     def transform_client_data(clients)
+      return [] unless clients.is_a?(Array)
+      
       clients.map do |client|
+        # Skip if client is not a hash
+        next {} unless client.is_a?(Hash)
+        
         # Extract first and last name from full_name if needed
         if client['full_name'] && (!client['first_name'] || !client['last_name'])
           names = client['full_name'].to_s.split
@@ -75,7 +95,7 @@ module ClientSearchCli
         client['phone'] = client['phone'] || ''
         
         client
-      end
+      end.compact
     end
 
     # Handle the error from the API
@@ -88,6 +108,8 @@ module ClientSearchCli
         puts "Error: Resource not found (404)"
       when 401
         puts "Error: Unauthorized access (401)"
+      when 403
+        puts "Error: Forbidden access (403)"
       when 500..599
         puts "Error: Server error (#{response.code})"
       else

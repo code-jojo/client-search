@@ -12,6 +12,8 @@ module ClientSearchCli
     # @param options [Hash] The options
     # @return [Array<Client>] The clients 
     def search_by_name(query, options = {})
+      # Convert nil query to empty string to avoid errors
+      query = query.to_s
       raw_clients = @api_client.search_clients_by_name(query)
       
       # Create client objects
@@ -35,9 +37,10 @@ module ClientSearchCli
         end
       end
       
-      # Apply limit if specified
-      if options[:limit] && options[:limit] > 0
-        clients = clients.take(options[:limit])
+      # Apply limit if specified and valid
+      limit = options[:limit]
+      if limit && limit.is_a?(Integer) && limit > 0
+        clients = clients.take(limit)
       end
       
       clients

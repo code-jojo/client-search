@@ -9,6 +9,8 @@ module ClientSearchCli
   class CLI < Thor
     desc "search NAME", "Search for clients by name"
     method_option :format, type: :string, default: "table", desc: "Output format (table, json, csv)"
+    method_option :exact, type: :boolean, default: false, desc: "Match exact words only"
+    method_option :limit, type: :numeric, desc: "Limit number of results"
 
     # Search for clients by name
     #
@@ -21,7 +23,12 @@ module ClientSearchCli
         api_client = ApiClient.new
         search_service = ClientSearch.new(api_client)
         
-        clients = search_service.search_by_name(name)
+        # Prepare search options
+        search_options = {}
+        search_options[:exact] = options[:exact] if options[:exact]
+        search_options[:limit] = options[:limit].to_i if options[:limit]
+        
+        clients = search_service.search_by_name(name, search_options)
         
         if clients.empty?
           puts "No clients found matching name '#{name}'"

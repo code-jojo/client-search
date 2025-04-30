@@ -9,11 +9,13 @@ module ClientSearchCli
     # @param data [Hash] The data
     # @return [void]
     def initialize(data)
+      data ||= {}
       @id = data["id"]
       @first_name = data["first_name"]
       @last_name = data["last_name"]
       @full_name = data["full_name"] || 
                    [@first_name, @last_name].compact.join(" ")
+      @full_name = "" if @full_name.nil?
       @email = data["email"]
     end
 
@@ -29,6 +31,11 @@ module ClientSearchCli
     #
     # @return [String] The first name
     def first_name
+      return @first_name if @first_name
+      
+      # Only extract from full_name if it exists and isn't empty
+      return nil if full_name.nil? || full_name.empty?
+      
       @first_name ||= full_name.to_s.split.first
     end
 
@@ -36,7 +43,16 @@ module ClientSearchCli
     #
     # @return [String] The last name
     def last_name
-      @last_name ||= full_name.to_s.split[1..-1]&.join(" ")
+      return @last_name if @last_name
+      
+      # Only extract from full_name if it exists and isn't empty
+      return nil if full_name.nil? || full_name.empty?
+      
+      name_parts = full_name.to_s.split
+      return nil if name_parts.empty?
+      return "" if name_parts.size == 1
+      
+      @last_name ||= name_parts[1..-1]&.join(" ")
     end
 
     # Get the hash of the client
