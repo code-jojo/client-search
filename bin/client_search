@@ -4,7 +4,7 @@
 ########################################################################
 # NOTE:
 # This file serves as a direct entry point for debugging purposes.
-# We require the lib/client_search_cli file directly rather than using
+# We require the lib/client_search file directly rather than using
 # exe/client_search to ensure proper debugger functionality.
 #
 # This approach resolves an issue where the debugger would not activate
