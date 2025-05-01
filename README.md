@@ -1,4 +1,5 @@
 # Client Search
+[![Client Search](https://github.com/code-jojo/client-search/actions/workflows/client-search.yml/badge.svg)](https://github.com/code-jojo/client-search/actions/workflows/client-search.yml)
 
 A command-line interface and REST API for searching client data.
 
