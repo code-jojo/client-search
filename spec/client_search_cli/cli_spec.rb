@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
+require "spec_helper"
+
 RSpec.describe ClientSearchCli::CLI do
   let(:api_client) { instance_double("ClientSearchCli::ApiClient") }
   let(:search_service) { instance_double("ClientSearchCli::ClientSearch") }
-  let(:cli) { described_class.new }
+  subject(:cli) { described_class.new }
 
   before do
     allow(ClientSearchCli::ApiClient).to receive(:new).and_return(api_client)
@@ -20,27 +22,41 @@ RSpec.describe ClientSearchCli::CLI do
 
   describe "#search" do
     context "when clients are found" do
-      let(:clients) do
-        [
-          instance_double("ClientSearchCli::Client",
-                          id: 1,
-                          full_name: "John Doe",
-                          email: "john@example.com",
-                          to_h: { id: 1, full_name: "John Doe", email: "john@example.com" }),
-          instance_double("ClientSearchCli::Client",
-                          id: 2,
-                          full_name: "Jane Doe",
-                          email: "jane@example.com",
-                          to_h: { id: 2, full_name: "Jane Doe", email: "jane@example.com" })
-        ]
+      let(:client1) do
+        instance_double("ClientSearchCli::Client",
+                        id: 1,
+                        full_name: "John Doe",
+                        email: "john@example.com",
+                        data: { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },
+                        to_h: { id: 1, full_name: "John Doe", email: "john@example.com" })
+      end
+
+      let(:client2) do
+        instance_double("ClientSearchCli::Client",
+                        id: 2,
+                        full_name: "Jane Doe",
+                        email: "jane@example.com",
+                        data: { "id" => 2, "full_name" => "Jane Doe", "email" => "jane@example.com" },
+                        to_h: { id: 2, full_name: "Jane Doe", email: "jane@example.com" })
       end
 
       before do
-        allow(search_service).to receive(:search_by_name).with("Doe", any_args).and_return(clients)
+        allow(search_service).to receive(:search_by_field)
+          .with("Doe", "full_name", any_args)
+          .and_return([client1, client2])
+        allow(search_service).to receive(:search_by_field)
+          .with("john@example.com", "email", any_args)
+          .and_return([client1])
+        allow(search_service).to receive(:search_by_field)
+          .with("John", "full_name", any_args)
+          .and_return([client1])
+        allow(search_service).to receive(:search_by_field)
+          .with("1", "id", any_args)
+          .and_return([client1])
       end
 
       it "searches for clients by name and displays them in a table by default" do
-        allow(cli).to receive(:options).and_return({ format: "table" })
+        allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
         output = capture_stdout { cli.search("Doe") }
 
@@ -48,8 +64,33 @@ RSpec.describe ClientSearchCli::CLI do
         expect(output).to include("Jane Doe")
       end
 
+      it "searches for clients by email when specified" do
+        allow(cli).to receive(:options).and_return({ format: "table", field: "email" })
+
+        output = capture_stdout { cli.search("john@example.com") }
+
+        expect(output).to include("John Doe")
+        expect(output).not_to include("Jane Doe")
+      end
+
+      it "searches for clients by id when specified" do
+        allow(cli).to receive(:options).and_return({ format: "table", field: "id" })
+
+        output = capture_stdout { cli.search("1") }
+
+        expect(output).to include("John Doe")
+        expect(output).not_to include("Jane Doe")
+      end
+
+      it "passes the custom file path to the ApiClient when specified" do
+        allow(cli).to receive(:options).and_return({ format: "table", field: "full_name", file: "custom.json" })
+        expect(ClientSearchCli::ApiClient).to receive(:new).with("custom.json").and_return(api_client)
+
+        capture_stdout { cli.search("Doe") }
+      end
+
       it "displays clients in JSON format when requested" do
-        allow(cli).to receive(:options).and_return({ format: "json" })
+        allow(cli).to receive(:options).and_return({ format: "json", field: "full_name" })
 
         output = capture_stdout { cli.search("Doe") }
 
@@ -60,10 +101,11 @@ RSpec.describe ClientSearchCli::CLI do
 
     context "when no clients are found" do
       before do
-        allow(search_service).to receive(:search_by_name).with("NonExistent", any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with("NonExistent", "full_name", any_args).and_return([])
       end
 
       it "displays a message indicating no clients were found" do
+        allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
         output = capture_stdout { cli.search("NonExistent") }
 
         expect(output).to include("No results found.")
@@ -72,18 +114,21 @@ RSpec.describe ClientSearchCli::CLI do
 
     context "when an error occurs" do
       before do
-        allow(search_service).to receive(:search_by_name).with("Error", any_args).and_raise(ClientSearchCli::Error,
-                                                                                            "API connection failed")
+        allow(search_service).to receive(:search_by_field)
+          .with("Error", "full_name", any_args)
+          .and_raise(ClientSearchCli::Error, "API connection failed")
       end
 
       it "displays the error message and exits" do
+        allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
         expect { cli.search("Error") }.to output(/Error: API connection failed/).to_stdout.and raise_error(SystemExit)
       end
     end
 
     context "with edge case inputs" do
       it "handles empty search term" do
-        allow(search_service).to receive(:search_by_name).with("", any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with("", "full_name", any_args).and_return([])
+        allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
         output = capture_stdout { cli.search("") }
 
@@ -91,7 +136,8 @@ RSpec.describe ClientSearchCli::CLI do
       end
 
       it "handles nil search term" do
-        allow(search_service).to receive(:search_by_name).with(nil, any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with(nil, "full_name", any_args).and_return([])
+        allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
         output = capture_stdout { cli.search(nil) }
 
@@ -99,7 +145,8 @@ RSpec.describe ClientSearchCli::CLI do
       end
 
       it "handles search term with special characters" do
-        allow(search_service).to receive(:search_by_name).with("O'Brien", any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with("O'Brien", "full_name", any_args).and_return([])
+        allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
         output = capture_stdout { cli.search("O'Brien") }
 
@@ -113,15 +160,16 @@ RSpec.describe ClientSearchCli::CLI do
                         id: 1,
                         full_name: "John Doe",
                         email: "john@example.com",
+                        data: { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },
                         to_h: { id: 1, full_name: "John Doe", email: "john@example.com" })
       end
 
       before do
-        allow(search_service).to receive(:search_by_name).with("John", any_args).and_return([client])
+        allow(search_service).to receive(:search_by_field).with("John", "full_name", any_args).and_return([client])
       end
 
       it "defaults to table format when an invalid format is specified" do
-        allow(cli).to receive(:options).and_return({ format: "invalid_format" })
+        allow(cli).to receive(:options).and_return({ format: "invalid_format", field: "full_name" })
 
         output = capture_stdout { cli.search("John") }
 
@@ -137,8 +185,10 @@ RSpec.describe ClientSearchCli::CLI do
         "Authentication failure"
       ].each do |error_message|
         it "handles #{error_message} error" do
-          allow(search_service).to receive(:search_by_name).with("Network", any_args).and_raise(ClientSearchCli::Error,
-                                                                                                error_message)
+          allow(search_service).to receive(:search_by_field)
+            .with("Network", "full_name", any_args)
+            .and_raise(ClientSearchCli::Error, error_message)
+          allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
           expect { cli.search("Network") }.to output(/Error: #{error_message}/).to_stdout.and raise_error(SystemExit)
         end
@@ -153,6 +203,7 @@ RSpec.describe ClientSearchCli::CLI do
                         id: 1,
                         full_name: "John Doe",
                         email: "duplicate@example.com",
+                        data: { "id" => 1, "full_name" => "John Doe", "email" => "duplicate@example.com" },
                         to_h: { id: 1, full_name: "John Doe", email: "duplicate@example.com" })
       end
 
@@ -161,6 +212,7 @@ RSpec.describe ClientSearchCli::CLI do
                         id: 2,
                         full_name: "Jane Smith",
                         email: "duplicate@example.com",
+                        data: { "id" => 2, "full_name" => "Jane Smith", "email" => "duplicate@example.com" },
                         to_h: { id: 2, full_name: "Jane Smith", email: "duplicate@example.com" })
       end
 
@@ -169,6 +221,8 @@ RSpec.describe ClientSearchCli::CLI do
                         id: 3,
                         full_name: "Another Person",
                         email: "another.duplicate@example.com",
+                        data: { "id" => 3, "full_name" => "Another Person",
+                                "email" => "another.duplicate@example.com" },
                         to_h: { id: 3, full_name: "Another Person", email: "another.duplicate@example.com" })
       end
 
@@ -177,6 +231,7 @@ RSpec.describe ClientSearchCli::CLI do
                         id: 4,
                         full_name: "One More",
                         email: "another.duplicate@example.com",
+                        data: { "id" => 4, "full_name" => "One More", "email" => "another.duplicate@example.com" },
                         to_h: { id: 4, full_name: "One More", email: "another.duplicate@example.com" })
       end
 
@@ -200,6 +255,13 @@ RSpec.describe ClientSearchCli::CLI do
         expect(output).to include("Jane Smith")
         expect(output).to include("Another Person")
         expect(output).to include("One More")
+      end
+
+      it "uses custom file when specified" do
+        allow(cli).to receive(:options).and_return({ format: "table", file: "custom.json" })
+        expect(ClientSearchCli::ApiClient).to receive(:new).with("custom.json").and_return(api_client)
+
+        capture_stdout { cli.duplicates }
       end
 
       it "displays duplicate emails in JSON format when requested" do

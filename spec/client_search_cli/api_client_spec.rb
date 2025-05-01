@@ -1,141 +1,176 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "tempfile"
 
 RSpec.describe ClientSearchCli::ApiClient do
   subject(:api_client) { described_class.new }
 
+  describe "#initialize" do
+    it "initializes without a custom file by default" do
+      client = described_class.new
+      expect(client.instance_variable_get(:@custom_file)).to be_nil
+    end
+
+    it "initializes with a custom file path when specified" do
+      client = described_class.new("custom.json")
+      expect(client.instance_variable_get(:@custom_file)).to eq("custom.json")
+    end
+  end
+
   describe "#fetch_clients" do
-    it "successfully fetches clients from the API" do
-      clients = api_client.fetch_clients
-      expect(clients).not_to be_nil
-      expect(clients).to be_an(Array)
-      expect(clients.size).to be > 0
+    context "with default API source" do
+      it "successfully fetches clients from the API" do
+        clients = api_client.fetch_clients
+        expect(clients).not_to be_nil
+        expect(clients).to be_an(Array)
+        expect(clients.size).to be > 0
 
-      sample_client = clients.first
-      expect(sample_client).to include("id", "full_name", "email")
-    end
-
-    context "with network errors" do
-      before do
-        allow(described_class).to receive(:get).and_raise(Errno::ECONNREFUSED)
+        sample_client = clients.first
+        expect(sample_client).to include("id", "full_name", "email")
       end
 
-      it "handles connection errors gracefully" do
-        expect { api_client.fetch_clients }.to output(/Error: Connection refused/).to_stdout
-        expect(api_client.fetch_clients).to be_nil
+      context "with network errors" do
+        before do
+          allow(described_class).to receive(:get).and_raise(Errno::ECONNREFUSED)
+        end
+
+        it "handles connection errors gracefully" do
+          expect { api_client.fetch_clients }.to output(/Error: Connection refused/).to_stdout
+          expect(api_client.fetch_clients).to be_nil
+        end
+      end
+
+      context "with API response errors" do
+        let(:error_response) { instance_double("HTTParty::Response", success?: false, code: code) }
+
+        [404, 401, 500, 403].each do |status_code|
+          context "with #{status_code} status code" do
+            let(:code) { status_code }
+
+            before do
+              allow(described_class).to receive(:get).and_return(error_response)
+            end
+
+            it "handles #{status_code} error gracefully" do
+              expect { api_client.fetch_clients }.to output(/Error/).to_stdout
+              expect(api_client.fetch_clients).to be_nil
+            end
+          end
+        end
       end
     end
 
-    context "with API response errors" do
-      let(:error_response) { instance_double("HTTParty::Response", success?: false, code: code) }
+    context "with custom JSON file" do
+      let(:valid_json) do
+        [{
+          "id" => 1,
+          "name" => "Custom Name",
+          "email" => "custom@example.com",
+          "phone" => "123-456-7890",
+          "custom_field" => "custom value"
+        }].to_json
+      end
 
-      [404, 401, 500, 403].each do |status_code|
-        context "with #{status_code} status code" do
-          let(:code) { status_code }
+      let(:invalid_json) { "{ This is not valid JSON }" }
 
-          before do
-            allow(described_class).to receive(:get).and_return(error_response)
-          end
+      it "loads clients from a custom JSON file" do
+        file = Tempfile.new(["clients", ".json"])
+        begin
+          file.write(valid_json)
+          file.close
 
-          it "handles #{status_code} error gracefully" do
-            expect { api_client.fetch_clients }.to output(/Error/).to_stdout
-            expect(api_client.fetch_clients).to be_nil
-          end
+          client = described_class.new(file.path)
+          clients = client.fetch_clients
+
+          expect(clients).not_to be_nil
+          expect(clients).to be_an(Array)
+          expect(clients.size).to eq(1)
+          expect(clients.first).to include(
+            "id" => 1,
+            "name" => "Custom Name",
+            "email" => "custom@example.com",
+            "phone" => "123-456-7890",
+            "custom_field" => "custom value"
+          )
+        ensure
+          file.unlink
+        end
+      end
+
+      it "raises an error for non-existent file" do
+        client = described_class.new("/nonexistent/path/to/file.json")
+        expect { client.fetch_clients }.to raise_error(ClientSearchCli::Error, /File not found/)
+      end
+
+      it "raises an error for invalid JSON" do
+        file = Tempfile.new(["invalid", ".json"])
+        begin
+          file.write(invalid_json)
+          file.close
+
+          client = described_class.new(file.path)
+          expect { client.fetch_clients }.to raise_error(ClientSearchCli::Error, /Invalid JSON format/)
+        ensure
+          file.unlink
         end
       end
     end
   end
 
-  describe "#search_clients_by_name" do
-    it "returns matching clients when searching by name" do
-      clients = api_client.fetch_clients
-      named_client = clients.find { |c| (c["full_name"] || "").strip != "" }
-
-      if named_client
-        search_term = named_client["full_name"]
-        search_results = api_client.search_clients_by_name(search_term)
-
-        expect(search_results).to be_an(Array)
-        expect(search_results.size).to be >= 1
-      else
-        skip "No clients with names found for testing search"
-      end
+  describe "#search_clients_by_field" do
+    let(:mock_clients) do
+      [
+        { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com", "phone" => "123-456-7890" },
+        { "id" => 2, "full_name" => "Jane Smith", "email" => "jane@example.com", "phone" => "987-654-3210" },
+        { "id" => 3, "full_name" => "John-Paul Jones", "email" => "jp@example.com", "phone" => "555-555-5555" },
+        { "id" => 4, "full_name" => "María Rodríguez", "email" => "maria@example.com", "phone" => "111-222-3333" }
+      ]
     end
 
-    context "with edge cases in search terms" do
-      let(:mock_clients) do
-        [
-          { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },
-          { "id" => 2, "full_name" => "Jane Smith", "email" => "jane@example.com" },
-          { "id" => 3, "full_name" => "John-Paul Jones", "email" => "jp@example.com" },
-          { "id" => 4, "full_name" => "María Rodríguez", "email" => "maria@example.com" },
-          { "id" => 5, "full_name" => "", "email" => "no-name@example.com" },
-          { "id" => 6, "full_name" => nil, "email" => "nil-name@example.com" }
-        ]
-      end
+    before do
+      allow(api_client).to receive(:fetch_clients).and_return(mock_clients)
+    end
 
-      before do
-        allow(api_client).to receive(:fetch_clients).and_return(mock_clients)
-      end
+    it "searches by name field" do
+      results = api_client.search_clients_by_field("John", "name")
+      expect(results).to be_an(Array)
+      expect(results.size).to eq(2)
+      expect(results.map { |c| c["full_name"] }).to include("John Doe", "John-Paul Jones")
+    end
 
-      it "handles empty search terms" do
-        allow(api_client).to receive(:search_clients_by_name).with("").and_return([])
-        results = api_client.search_clients_by_name("")
-        expect(results).to be_an(Array)
-      end
+    it "searches by email field" do
+      results = api_client.search_clients_by_field("jane@example", "email")
+      expect(results).to be_an(Array)
+      expect(results.size).to eq(1)
+      expect(results.first["full_name"]).to eq("Jane Smith")
+    end
 
-      it "handles nil search terms" do
-        allow(api_client).to receive(:search_clients_by_name).with(nil).and_return([])
-        expect { api_client.search_clients_by_name(nil) }.not_to raise_error
-        results = api_client.search_clients_by_name(nil)
-        expect(results).to be_an(Array)
-      end
+    it "searches by custom field" do
+      results = api_client.search_clients_by_field("555-555", "phone")
+      expect(results).to be_an(Array)
+      expect(results.size).to eq(1)
+      expect(results.first["full_name"]).to eq("John-Paul Jones")
+    end
 
-      it "handles special characters in search terms" do
-        special_client = mock_clients[3]
-        allow(api_client).to receive(:search_clients_by_name).with("María").and_return([special_client])
-        results = api_client.search_clients_by_name("María")
-        expect(results).to be_an(Array)
-        expect(results.size).to eq(1)
-        expect(results.first["full_name"]).to eq("María Rodríguez")
-      end
+    it "handles field variations" do
+      # Test for different name field variations
+      results = api_client.search_clients_by_field("John", "full_name")
+      expect(results.size).to eq(2)
 
-      it "handles hyphenated names" do
-        hyphenated_client = mock_clients[2]
-        allow(api_client).to receive(:search_clients_by_name).with("John-Paul").and_return([hyphenated_client])
-        results = api_client.search_clients_by_name("John-Paul")
-        expect(results).to be_an(Array)
-        expect(results.size).to eq(1)
-        expect(results.first["full_name"]).to eq("John-Paul Jones")
-      end
+      results = api_client.search_clients_by_field("john@example", "e-mail")
+      expect(results.size).to eq(1)
+      expect(results.first["email"]).to eq("john@example.com")
+    end
 
-      it "handles case insensitivity" do
-        john_client = mock_clients[0]
-        allow(api_client).to receive(:search_clients_by_name).with("john").and_return([john_client])
-        results = api_client.search_clients_by_name("john")
-        expect(results).to be_an(Array)
-        expect(results.size).to eq(1)
-        expect(results.first["full_name"]).to eq("John Doe")
-      end
+    it "returns empty array for non-existent field" do
+      results = api_client.search_clients_by_field("value", "nonexistent_field")
+      expect(results).to be_empty
+    end
 
-      it "handles multi-word searches correctly" do
-        john_client = mock_clients[0]
-        allow(api_client).to receive(:search_clients_by_name).with("John Doe").and_return([john_client])
-        results = api_client.search_clients_by_name("John Doe")
-        expect(results).to be_an(Array)
-        expect(results.size).to eq(1)
-        expect(results.first["full_name"]).to eq("John Doe")
-      end
-
-      it "properly handles multiple spaces in search terms" do
-        john_client = mock_clients[0]
-        allow(api_client).to receive(:search_clients_by_name).with("John  Doe").and_return([john_client])
-        results = api_client.search_clients_by_name("John  Doe")
-        expect(results).to be_an(Array)
-        expect(results.size).to eq(1)
-        expect(results.first["full_name"]).to eq("John Doe")
-      end
+    it "returns empty array for no matches" do
+      results = api_client.search_clients_by_field("XYZ#{rand(10_000)}", "name")
+      expect(results).to be_empty
     end
   end
 
@@ -148,6 +183,36 @@ RSpec.describe ClientSearchCli::ApiClient do
       end
 
       it "keeps existing data intact" do
+        expect(transformed_data.first).to include(
+          "id" => 1,
+          "full_name" => "John Doe",
+          "email" => "john@example.com"
+        )
+      end
+    end
+
+    context "with symbol keys" do
+      let(:raw_data) do
+        [{ id: 1, full_name: "John Doe", email: "john@example.com" }]
+      end
+
+      it "converts symbol keys to strings" do
+        expect(transformed_data.first).to include(
+          "id" => 1,
+          "full_name" => "John Doe",
+          "email" => "john@example.com"
+        )
+      end
+    end
+
+    context "with non-array input" do
+      let(:raw_data) do
+        { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" }
+      end
+
+      it "wraps non-array input in an array" do
+        expect(transformed_data).to be_an(Array)
+        expect(transformed_data.size).to eq(1)
         expect(transformed_data.first).to include(
           "id" => 1,
           "full_name" => "John Doe",

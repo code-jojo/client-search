@@ -4,13 +4,14 @@ module ClientSearchCli
   # Represents a client entity with identification and contact information
   # Provides methods for initialization from various data sources and serialization
   class Client
-    attr_reader :id, :full_name, :email
+    attr_reader :id, :full_name, :email, :data
 
     def initialize(data)
       data ||= {}
-      @id = data["id"]
-      @full_name = data["full_name"] || ""
-      @email = data["email"]
+      @data = data.transform_keys(&:to_s)
+      @id = @data["id"]
+      @full_name = @data["full_name"] || @data["name"] || ""
+      @email = @data["email"]
     end
 
     def name
@@ -18,11 +19,17 @@ module ClientSearchCli
     end
 
     def to_h
-      {
-        id: id,
-        full_name: full_name,
-        email: email
-      }
+      @data
+    end
+
+    def method_missing(method_name, *args)
+      return @data[method_name.to_s] if @data.key?(method_name.to_s)
+
+      super
+    end
+
+    def respond_to_missing?(method_name, include_private = false)
+      @data.key?(method_name.to_s) || super
     end
   end
 end

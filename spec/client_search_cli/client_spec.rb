@@ -19,6 +19,7 @@ RSpec.describe ClientSearchCli::Client do
         expect(client.id).to eq(1)
         expect(client.full_name).to eq("John Doe")
         expect(client.email).to eq("john@example.com")
+        expect(client.data).to eq(client_data)
       end
     end
 
@@ -33,6 +34,7 @@ RSpec.describe ClientSearchCli::Client do
         expect(client.id).to eq(2)
         expect(client.email).to eq("jane@example.com")
         expect(client.full_name).to eq("")
+        expect(client.data).to eq(client_data)
       end
     end
 
@@ -42,6 +44,7 @@ RSpec.describe ClientSearchCli::Client do
         expect(client.id).to be_nil
         expect(client.full_name).to eq("")
         expect(client.email).to be_nil
+        expect(client.data).to eq({})
       end
 
       it "handles empty input data" do
@@ -50,6 +53,7 @@ RSpec.describe ClientSearchCli::Client do
         expect(client.id).to be_nil
         expect(client.full_name).to eq("")
         expect(client.email).to be_nil
+        expect(client.data).to eq({})
       end
 
       it "handles empty string values" do
@@ -57,6 +61,46 @@ RSpec.describe ClientSearchCli::Client do
 
         expect(client.full_name).to eq("")
         expect(client.email).to eq("")
+      end
+    end
+
+    context "with custom fields" do
+      let(:client_data) do
+        {
+          "id" => 1,
+          "name" => "John Doe",
+          "email" => "john@example.com",
+          "phone" => "123-456-7890",
+          "address" => "123 Main St",
+          "custom_field" => "custom value"
+        }
+      end
+
+      it "initializes with all custom fields" do
+        client = described_class.new(client_data)
+
+        expect(client.data).to eq(client_data.transform_keys(&:to_s))
+        expect(client.data["phone"]).to eq("123-456-7890")
+        expect(client.data["address"]).to eq("123 Main St")
+        expect(client.data["custom_field"]).to eq("custom value")
+      end
+
+      it "uses name as full_name when full_name is not present" do
+        client = described_class.new(client_data)
+        expect(client.full_name).to eq("John Doe")
+      end
+
+      it "correctly handles symbol keys" do
+        data_with_symbols = {
+          id: 1,
+          name: "John Doe",
+          email: "john@example.com"
+        }
+
+        client = described_class.new(data_with_symbols)
+        expect(client.id).to eq(1)
+        expect(client.full_name).to eq("John Doe")
+        expect(client.email).to eq("john@example.com")
       end
     end
   end
@@ -84,32 +128,56 @@ RSpec.describe ClientSearchCli::Client do
   end
 
   describe "#to_h" do
-    it "returns a hash with all client attributes" do
+    it "returns the entire data hash" do
       client_data = {
         "id" => 1,
         "full_name" => "John Doe",
-        "email" => "john@example.com"
+        "email" => "john@example.com",
+        "custom_field" => "custom value"
       }
 
       client = described_class.new(client_data)
       client_hash = client.to_h
 
-      expect(client_hash).to include(
-        id: 1,
-        full_name: "John Doe",
-        email: "john@example.com"
-      )
+      expect(client_hash).to eq(client_data)
+    end
+  end
+
+  describe "dynamic field access" do
+    let(:client_data) do
+      {
+        "id" => 1,
+        "full_name" => "John Doe",
+        "email" => "john@example.com",
+        "phone" => "123-456-7890",
+        "custom_field" => "custom value"
+      }
     end
 
-    it "includes nil values for missing attributes" do
-      client = described_class.new({ "id" => 1 })
-      client_hash = client.to_h
+    subject(:client) { described_class.new(client_data) }
 
-      expect(client_hash).to include(
-        id: 1,
-        full_name: "",
-        email: nil
-      )
+    it "allows access to standard fields through methods" do
+      expect(client.id).to eq(1)
+      expect(client.full_name).to eq("John Doe")
+      expect(client.email).to eq("john@example.com")
+    end
+
+    it "allows access to custom fields through method_missing" do
+      expect(client.phone).to eq("123-456-7890")
+      expect(client.custom_field).to eq("custom value")
+    end
+
+    it "raises NoMethodError for undefined fields" do
+      expect { client.nonexistent_field }.to raise_error(NoMethodError)
+    end
+
+    it "responds correctly to respond_to?" do
+      expect(client.respond_to?(:id)).to be true
+      expect(client.respond_to?(:full_name)).to be true
+      expect(client.respond_to?(:email)).to be true
+      expect(client.respond_to?(:phone)).to be true
+      expect(client.respond_to?(:custom_field)).to be true
+      expect(client.respond_to?(:nonexistent_field)).to be false
     end
   end
 end

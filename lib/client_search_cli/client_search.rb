@@ -8,10 +8,12 @@ module ClientSearchCli
       @api_client = api_client
     end
 
-    # Search for clients by name
-    def search_by_name(query, _options = {})
+    # Search for clients by any field
+    def search_by_field(query, field = nil, _options = {})
+      field = "full_name" if field.nil? || field.to_s.strip.empty?
+
       query = query.to_s
-      raw_clients = @api_client.search_clients_by_name(query)
+      raw_clients = @api_client.search_clients_by_field(query, field)
       raw_clients.map { |data| Client.new(data) }
     end
 

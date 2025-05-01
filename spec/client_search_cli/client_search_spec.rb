@@ -13,29 +13,47 @@ RSpec.describe ClientSearchCli::ClientSearch do
     ]
   end
 
-  describe "#search_by_name" do
-    it "returns clients with names matching search terms" do
-      %w[John Smith Jane].each do |search_term|
-        clients = search_service.search_by_name(search_term)
-
-        expect(clients).to be_an(Array)
-
-        next if clients.empty?
-
-        clients.each do |client|
-          expect(client).to be_a(ClientSearchCli::Client)
-          expect(client.name).to be_a(String)
-          expect(client.id).not_to be_nil
-
-          expect(client.name.downcase).to include(search_term.downcase)
-        end
+  describe "#search_by_field" do
+    context "when searching by various fields" do
+      let(:mock_clients) do
+        [
+          { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com", "phone" => "123-456-7890" },
+          { "id" => 2, "full_name" => "Jane Smith", "email" => "jane@example.com", "phone" => "987-654-3210" },
+          { "id" => 3, "full_name" => "Alice Jones", "email" => "alice@example.com", "phone" => "555-123-4567" }
+        ]
       end
-    end
 
-    it "returns an empty array when no matches are found" do
-      random_name = "XYZ#{rand(10_000)}"
-      clients = search_service.search_by_name(random_name)
-      expect(clients).to eq([])
+      it "searches by email field" do
+        email = "jane@example.com"
+        expect(api_client).to receive(:search_clients_by_field).with(email, "email").and_return([mock_clients[1]])
+
+        results = search_service.search_by_field(email, "email")
+        expect(results.size).to eq(1)
+        expect(results.first.email).to eq(email)
+      end
+
+      it "searches by custom field" do
+        phone = "555-123-4567"
+        expect(api_client).to receive(:search_clients_by_field).with(phone, "phone").and_return([mock_clients[2]])
+
+        results = search_service.search_by_field(phone, "phone")
+        expect(results.size).to eq(1)
+        expect(results.first.data["phone"]).to eq(phone)
+      end
+
+      it "handles fields that don't exist" do
+        expect(api_client).to receive(:search_clients_by_field).with("value", "nonexistent_field").and_return([])
+
+        results = search_service.search_by_field("value", "nonexistent_field")
+        expect(results).to be_empty
+      end
+
+      it "passes options to the API client" do
+        options = { case_sensitive: true }
+        expect(api_client).to receive(:search_clients_by_field).with("John", "full_name").and_return([mock_clients[0]])
+
+        search_service.search_by_field("John", "full_name", options)
+      end
     end
 
     context "with edge case inputs" do
@@ -51,44 +69,40 @@ RSpec.describe ClientSearchCli::ClientSearch do
       end
 
       before do
-        allow(api_client).to receive(:search_clients_by_name).and_return(mock_clients)
+        allow(api_client).to receive(:search_clients_by_field).and_return(mock_clients)
       end
 
       it "handles nil search query" do
-        expect { search_service.search_by_name(nil) }.not_to raise_error
-        clients = search_service.search_by_name(nil)
+        expect { search_service.search_by_field(nil, "full_name") }.not_to raise_error
+        allow(api_client).to receive(:search_clients_by_field).with(nil, "full_name").and_return(mock_clients)
+
+        clients = search_service.search_by_field(nil, "full_name")
         expect(clients).to be_an(Array)
         expect(clients.size).to eq(mock_clients.size)
       end
 
       it "handles empty string search query" do
-        clients = search_service.search_by_name("")
+        allow(api_client).to receive(:search_clients_by_field).with("", "full_name").and_return(mock_clients)
+
+        clients = search_service.search_by_field("", "full_name")
         expect(clients).to be_an(Array)
         expect(clients.size).to eq(mock_clients.size)
       end
 
-      it "handles search terms with apostrophes" do
-        allow(api_client).to receive(:search_clients_by_name).with("O'Brien").and_return([mock_clients[2]])
-        clients = search_service.search_by_name("O'Brien")
-        expect(clients).to be_an(Array)
-        expect(clients.size).to eq(1)
-        expect(clients.first.full_name).to eq("O'Brien Wilson")
+      it "handles nil field parameter" do
+        # Should default to "full_name"
+        expect(api_client).to receive(:search_clients_by_field).with("O'Brien",
+                                                                     "full_name").and_return([mock_clients[2]])
+
+        search_service.search_by_field("O'Brien", nil)
       end
 
-      it "handles search terms with non-Latin characters" do
-        allow(api_client).to receive(:search_clients_by_name).with("张伟").and_return([mock_clients[3]])
-        clients = search_service.search_by_name("张伟")
-        expect(clients).to be_an(Array)
-        expect(clients.size).to eq(1)
-        expect(clients.first.full_name).to eq("张伟 (Zhang Wei)")
-      end
+      it "handles empty field parameter" do
+        # Should default to "full_name"
+        expect(api_client).to receive(:search_clients_by_field).with("O'Brien",
+                                                                     "full_name").and_return([mock_clients[2]])
 
-      it "handles search terms with parentheses" do
-        allow(api_client).to receive(:search_clients_by_name).with("(Zhang").and_return([mock_clients[3]])
-        clients = search_service.search_by_name("(Zhang")
-        expect(clients).to be_an(Array)
-        expect(clients.size).to eq(1)
-        expect(clients.first.full_name).to eq("张伟 (Zhang Wei)")
+        search_service.search_by_field("O'Brien", "")
       end
     end
   end

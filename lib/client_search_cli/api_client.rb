@@ -1,44 +1,52 @@
 # frozen_string_literal: true
 
 require "httparty"
+require "json"
+require_relative "api/response_handling"
+require_relative "api/client_search"
 
 module ClientSearchCli
   # API client for interacting with the client search service
   # Handles fetching clients and searching by various criteria
   class ApiClient
     include HTTParty
+    include Api::ResponseHandling
+    include Api::ClientSearch
+
     base_uri ENV.fetch("SHIFTCARE_API_URL", "https://appassets02.shiftcare.com/manual")
     format :json
 
-    # Fetch clients from the API
+    def initialize(custom_file = nil)
+      @custom_file = custom_file
+    end
+
+    # Fetch clients from the API or from a custom file
     def fetch_clients
-      response = self.class.get("/clients.json")
-      handle_response(response)
+      if @custom_file
+        fetch_from_file
+      else
+        fetch_from_api
+      end
     rescue Errno::ECONNREFUSED, Timeout::Error, HTTParty::Error => e
-      error_message = case e
-                      when Errno::ECONNREFUSED then "Connection refused"
-                      when Timeout::Error then "Network timeout"
-                      when HTTParty::Error then "API returned invalid data"
-                      else e.message
-                      end
-      puts "Error: #{error_message}"
-      nil
+      handle_network_error(e)
+    rescue ClientSearchCli::Error
+      raise
     rescue StandardError => e
       puts "Error: #{e.message}"
       nil
     end
 
-    # Search for clients by name
-    def search_clients_by_name(name)
-      return [] if name.nil? || name.strip.empty?
+    # Search for clients by any field
+    def search_clients_by_field(value, field = "full_name")
+      return [] if value.nil? || value.strip.empty?
 
-      search_query = name.downcase.strip
+      search_query = value.downcase.strip
       search_parts = search_query.split(/\s+/)
 
       clients = fetch_clients
       return [] unless clients
 
-      filter_clients_by_name(clients, search_query, search_parts)
+      filter_clients_by_field(clients, field, search_query, search_parts)
     end
 
     # Find duplicate clients based on email
@@ -46,68 +54,14 @@ module ClientSearchCli
       clients = fetch_clients&.map { |client| Client.new(client) }
       return {} unless clients
 
-      clients_by_email = group_clients_by_email(clients)
-      filter_duplicates(clients_by_email)
+      find_duplicates(clients)
     end
 
     private
 
-    def filter_clients_by_name(clients, search_query, search_parts)
-      clients.select do |client|
-        client_matches_search?(client, search_query, search_parts)
-      end
-    end
-
-    def client_matches_search?(client, search_query, search_parts)
-      full_name = client["full_name"]&.downcase || ""
-      email = client["email"]&.downcase || ""
-
-      exact_match?(full_name, search_query) ||
-        name_parts_match?(full_name, search_parts) ||
-        email_match?(email, search_query)
-    end
-
-    def exact_match?(full_name, search_query)
-      full_name == search_query
-    end
-
-    def name_parts_match?(full_name, search_parts)
-      name_parts = full_name.split(/\s+/)
-
-      name_parts.any? do |name_part|
-        search_parts.any? do |search_part|
-          name_part == search_part || name_part.start_with?(search_part)
-        end
-      end
-    end
-
-    def email_match?(email, search_query)
-      email.include?(search_query)
-    end
-
-    def handle_response(response)
-      if response.success?
-        transform_client_data(response.parsed_response)
-      else
-        handle_error(response)
-        nil
-      end
-    end
-
-    def handle_error(response)
-      message = case response.code
-                when 404 then "Resource not found (404)"
-                when 401 then "Unauthorized access (401)"
-                when 403 then "Forbidden access (403)"
-                when 500 then "Server error (500)"
-                else "API Error: #{response.code} - #{response.message}"
-                end
-      puts "Error: #{message}"
-    end
-
-    def transform_client_data(clients)
-      clients = [clients] unless clients.is_a?(Array)
-      clients.map { |client| client.transform_keys(&:to_s) }
+    def find_duplicates(clients)
+      clients_by_email = group_clients_by_email(clients)
+      filter_duplicates(clients_by_email)
     end
 
     def group_clients_by_email(clients)
@@ -126,6 +80,22 @@ module ClientSearchCli
 
     def valid_email?(email)
       email && !email.empty?
+    end
+
+    def fetch_from_api
+      response = self.class.get("/clients.json")
+      handle_response(response)
+    end
+
+    def fetch_from_file
+      raise ClientSearchCli::Error, "File not found: #{@custom_file}" unless File.exist?(@custom_file)
+
+      begin
+        data = JSON.parse(File.read(@custom_file))
+        transform_client_data(data)
+      rescue JSON::ParserError
+        raise ClientSearchCli::Error, "Invalid JSON format in file: #{@custom_file}"
+      end
     end
   end
 end

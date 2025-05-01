@@ -15,13 +15,15 @@ module ClientSearchCli
       true
     end
 
-    desc "search NAME", "Search for clients by name"
+    desc "search VALUE", "Search for clients"
     option :format, type: :string, desc: "Output format (table, json)", default: "table"
-    def search(name)
-      search_service = ClientSearch.new(ApiClient.new)
+    option :field, type: :string, desc: "Field to search (default: full_name)", default: "full_name"
+    option :file, type: :string, desc: "Path to custom JSON file to search"
+    def search(value)
+      search_service = ClientSearch.new(ApiClient.new(options[:file]))
 
       begin
-        clients = search_service.search_by_name(name)
+        clients = search_service.search_by_field(value, options[:field])
         display_results(clients, options[:format])
       rescue Error => e
         error_message(e)
@@ -30,8 +32,9 @@ module ClientSearchCli
 
     desc "duplicates", "Find clients with duplicate email addresses"
     option :format, type: :string, desc: "Output format (table, json)", default: "table"
+    option :file, type: :string, desc: "Path to custom JSON file to search"
     def duplicates
-      search_service = ClientSearch.new(ApiClient.new)
+      search_service = ClientSearch.new(ApiClient.new(options[:file]))
 
       begin
         duplicate_groups = search_service.find_duplicate_emails
