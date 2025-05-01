@@ -1,4 +1,4 @@
-name: Client Search CLI
+name: Client Search
 
 on:
   push:
