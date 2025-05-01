@@ -21,7 +21,7 @@ module ClientSearch
     end
 
     # Search endpoint
-    # GET /query?q=John Doe&field=full_name
+    # GET /query?q=John&field=full_name
     get "/query" do
       query = params["q"]
       field = params["field"] || "full_name"
