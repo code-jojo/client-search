@@ -2,7 +2,7 @@
 
 require "json"
 
-module ClientSearchCli
+module ClientSearch
   module Output
     # Helper methods for formatting and displaying client data
     module FormattingHelpers

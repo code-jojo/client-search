@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    client-search-cli (0.1.0)
+    client-search (0.1.0)
       csv (~> 3.3)
       httparty (~> 0.21.0)
       terminal-table (~> 3.0)
@@ -11,6 +11,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
+    base64 (0.2.0)
     bigdecimal (3.1.9)
     csv (3.3.4)
     diff-lcs (1.6.1)
@@ -24,12 +25,18 @@ GEM
     mini_mime (1.1.5)
     multi_xml (0.7.1)
       bigdecimal (~> 3.1)
+    mustermann (3.0.3)
+      ruby2_keywords (~> 0.0.1)
     parallel (1.27.0)
     parser (3.3.8.0)
       ast (~> 2.4.1)
       racc
     prism (1.4.0)
     racc (1.8.1)
+    rack (2.2.13)
+    rack-protection (3.2.0)
+      base64 (>= 0.1.0)
+      rack (~> 2.2, >= 2.2.4)
     rainbow (3.1.1)
     rake (13.2.1)
     regexp_parser (2.10.0)
@@ -60,26 +67,44 @@ GEM
     rubocop-ast (1.44.1)
       parser (>= 3.3.7.2)
       prism (~> 1.4)
+    rubocop-rake (0.7.1)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.72.1)
+    rubocop-rspec (3.6.0)
+      lint_roller (~> 1.1)
+      rubocop (~> 1.72, >= 1.72.1)
     ruby-progressbar (1.13.0)
+    ruby2_keywords (0.0.5)
+    sinatra (3.2.0)
+      mustermann (~> 3.0)
+      rack (~> 2.2, >= 2.2.4)
+      rack-protection (= 3.2.0)
+      tilt (~> 2.0)
     terminal-table (3.0.2)
       unicode-display_width (>= 1.1.1, < 3)
     thor (1.3.2)
+    tilt (2.6.0)
     unicode-display_width (2.6.0)
+    webrick (1.9.1)
 
 PLATFORMS
   arm64-darwin-24
   ruby
 
 DEPENDENCIES
-  client-search-cli!
+  client-search!
   csv
   dotenv (~> 2.8)
   httparty (~> 0.21.0)
   rake (~> 13.0)
   rspec (~> 3.0)
   rubocop (~> 1.21)
+  rubocop-rake (~> 0.7.1)
+  rubocop-rspec (~> 3.6)
+  sinatra (~> 3.1)
   terminal-table (~> 3.0)
   thor (~> 1.2)
+  webrick (~> 1.8)
 
 BUNDLED WITH
    2.6.8

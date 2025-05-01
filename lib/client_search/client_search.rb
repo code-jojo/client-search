@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ClientSearchCli
+module ClientSearch
   # Service class for searching and processing client data
   # Provides functionality for finding clients by name, email, and identifying duplicates
   class ClientSearch

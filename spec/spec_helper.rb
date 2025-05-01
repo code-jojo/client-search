@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "client_search_cli"
+require "client_search"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

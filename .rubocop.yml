@@ -5,6 +5,10 @@ AllCops:
     - 'bin/**/*'
     - 'vendor/**/*'
 
+plugins:
+  - rubocop-rake
+  - rubocop-rspec
+
 Style/StringLiterals:
   Enabled: true
   EnforcedStyle: double_quotes
@@ -28,4 +32,32 @@ Style/Documentation:
 
 Style/FrozenStringLiteralComment:
   Enabled: true
-  EnforcedStyle: always 
+  EnforcedStyle: always
+
+# RSpec specific configurations
+RSpec/ExampleLength:
+  Max: 20
+
+RSpec/MultipleExpectations:
+  Max: 8
+
+RSpec/NestedGroups:
+  Max: 5
+
+RSpec/SubjectStub:
+  Enabled: false
+
+RSpec/StubbedMock:
+  Enabled: false
+
+RSpec/MessageSpies:
+  Enabled: false
+
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 10
+
+RSpec/SpecFilePathFormat:
+  Enabled: false 

@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe ClientSearchCli::Client do
+RSpec.describe ClientSearch::Client do
   describe "#initialize" do
     context "with complete data" do
       let(:client_data) do
@@ -144,6 +144,8 @@ RSpec.describe ClientSearchCli::Client do
   end
 
   describe "dynamic field access" do
+    subject(:client) { described_class.new(client_data) }
+
     let(:client_data) do
       {
         "id" => 1,
@@ -153,8 +155,6 @@ RSpec.describe ClientSearchCli::Client do
         "custom_field" => "custom value"
       }
     end
-
-    subject(:client) { described_class.new(client_data) }
 
     it "allows access to standard fields through methods" do
       expect(client.id).to eq(1)

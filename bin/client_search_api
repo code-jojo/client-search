@@ -5,13 +5,18 @@
 # NOTE:
 # This file serves as a direct entry point for debugging purposes.
 # We require the lib/client_search_cli file directly rather than using
-# exe/client_search to ensure proper debugger functionality.
+# exe/client_search_api to ensure proper debugger functionality.
 #
 # This approach resolves an issue where the debugger would not activate
-# when running through exe/client_search.
+# when running through exe/client_search_api.
 ########################################################################
 
 require_relative "../lib/client_search"
+require_relative "../lib/client_search/api_server"
 
-# Start the CLI
-ClientSearch::CLI.start(ARGV)
+port = ENV["PORT"] || 3000
+
+puts "Starting client search API server on http://localhost:#{port}"
+puts "Use Ctrl+C to stop the server"
+
+ClientSearch::ApiServer.run!(host: "localhost", port: port)

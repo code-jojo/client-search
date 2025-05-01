@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ClientSearchCli
+module ClientSearch
   module Api
     # Module for client search functionality
     module ClientSearch

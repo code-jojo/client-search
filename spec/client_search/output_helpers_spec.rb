@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-RSpec.describe ClientSearchCli::OutputHelpers do
+RSpec.describe ClientSearch::OutputHelpers do
   let(:test_class) do
     Class.new do
-      include ClientSearchCli::OutputHelpers
+      include ClientSearch::OutputHelpers
 
       # Expose private method for testing
       def test_with_dependencies(*dependencies, &block)
@@ -19,13 +19,13 @@ RSpec.describe ClientSearchCli::OutputHelpers do
 
   let(:clients) do
     [
-      instance_double("ClientSearchCli::Client",
+      instance_double(ClientSearch::Client,
                       id: 1,
                       full_name: "John Doe",
                       email: "john@example.com",
                       data: { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },
                       to_h: { id: 1, full_name: "John Doe", email: "john@example.com" }),
-      instance_double("ClientSearchCli::Client",
+      instance_double(ClientSearch::Client,
                       id: 2,
                       full_name: "Jane Smith",
                       email: "jane@example.com",
@@ -37,26 +37,26 @@ RSpec.describe ClientSearchCli::OutputHelpers do
   # Create real Client objects instead of instance_doubles for custom fields
   let(:clients_with_custom_fields) do
     [
-      ClientSearchCli::Client.new({
-                                    "id" => 1,
-                                    "full_name" => "John Doe",
-                                    "email" => "john@example.com",
-                                    "phone" => "123-456-7890",
-                                    "address" => "123 Main St"
-                                  }),
-      ClientSearchCli::Client.new({
-                                    "id" => 2,
-                                    "full_name" => "Jane Smith",
-                                    "email" => "jane@example.com",
-                                    "phone" => "987-654-3210",
-                                    "address" => "456 Oak Ave"
-                                  })
+      ClientSearch::Client.new({
+                                 "id" => 1,
+                                 "full_name" => "John Doe",
+                                 "email" => "john@example.com",
+                                 "phone" => "123-456-7890",
+                                 "address" => "123 Main St"
+                               }),
+      ClientSearch::Client.new({
+                                 "id" => 2,
+                                 "full_name" => "Jane Smith",
+                                 "email" => "jane@example.com",
+                                 "phone" => "987-654-3210",
+                                 "address" => "456 Oak Ave"
+                               })
     ]
   end
 
   let(:clients_with_minimal_fields) do
     [
-      instance_double("ClientSearchCli::Client",
+      instance_double(ClientSearch::Client,
                       id: nil,
                       full_name: nil,
                       email: nil,
@@ -76,13 +76,13 @@ RSpec.describe ClientSearchCli::OutputHelpers do
   let(:duplicate_groups) do
     {
       "duplicate@example.com" => [
-        instance_double("ClientSearchCli::Client",
+        instance_double(ClientSearch::Client,
                         id: 3,
                         full_name: "Jim Beam",
                         email: "duplicate@example.com",
                         data: { "id" => 3, "full_name" => "Jim Beam", "email" => "duplicate@example.com" },
                         to_h: { id: 3, full_name: "Jim Beam", email: "duplicate@example.com" }),
-        instance_double("ClientSearchCli::Client",
+        instance_double(ClientSearch::Client,
                         id: 4,
                         full_name: "Jack Daniels",
                         email: "duplicate@example.com",
@@ -121,7 +121,7 @@ RSpec.describe ClientSearchCli::OutputHelpers do
     end
 
     it "includes custom fields when standard fields are incomplete" do
-      client = instance_double("ClientSearchCli::Client",
+      client = instance_double(ClientSearch::Client,
                                data: { "id" => 1, "email" => "email@example.com", "phone" => "123-456-7890" })
 
       fields = test_class.test_determine_display_fields(client)
@@ -129,7 +129,7 @@ RSpec.describe ClientSearchCli::OutputHelpers do
     end
 
     it "uses all available fields (up to 5) when standard fields are not present" do
-      client = instance_double("ClientSearchCli::Client",
+      client = instance_double(ClientSearch::Client,
                                data: {
                                  "first_name" => "John",
                                  "last_name" => "Doe",
@@ -152,7 +152,7 @@ RSpec.describe ClientSearchCli::OutputHelpers do
     end
 
     it "handles client without data gracefully" do
-      client = instance_double("ClientSearchCli::Client", data: nil)
+      client = instance_double(ClientSearch::Client, data: nil)
       fields = test_class.test_determine_display_fields(client)
       expect(fields).to contain_exactly("id", "full_name", "email")
     end
@@ -229,7 +229,7 @@ RSpec.describe ClientSearchCli::OutputHelpers do
       end
 
       it "handles clients with nil emails" do
-        client_with_nil_email = instance_double("ClientSearchCli::Client",
+        client_with_nil_email = instance_double(ClientSearch::Client,
                                                 id: 5,
                                                 full_name: "No Email",
                                                 email: nil,

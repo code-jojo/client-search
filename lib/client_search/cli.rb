@@ -5,7 +5,7 @@ require "httparty"
 require "csv"
 require_relative "output_helpers"
 
-module ClientSearchCli
+module ClientSearch
   # Command Line Interface for client search functionality
   # Provides commands for searching and managing client data
   class CLI < Thor
@@ -44,9 +44,9 @@ module ClientSearchCli
       end
     end
 
-    desc "version", "Display the version of the client-search-cli"
+    desc "version", "Display the version of the client-search"
     def version
-      puts "client-search-cli version #{ClientSearchCli::VERSION}"
+      puts "client-search version #{VERSION}"
     end
 
     private

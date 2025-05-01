@@ -2,10 +2,10 @@
 
 require "spec_helper"
 
-RSpec.describe ClientSearchCli::ClientSearch do
-  let(:api_client) { ClientSearchCli::ApiClient.new }
+RSpec.describe ClientSearch::ClientSearch do
   subject(:search_service) { described_class.new(api_client) }
 
+  let(:api_client) { ClientSearch::ApiClient.new }
   let(:raw_clients) do
     [
       { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com" },

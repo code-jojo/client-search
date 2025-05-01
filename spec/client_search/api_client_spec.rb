@@ -3,7 +3,7 @@
 require "spec_helper"
 require "tempfile"
 
-RSpec.describe ClientSearchCli::ApiClient do
+RSpec.describe ClientSearch::ApiClient do
   subject(:api_client) { described_class.new }
 
   describe "#initialize" do
@@ -42,7 +42,7 @@ RSpec.describe ClientSearchCli::ApiClient do
       end
 
       context "with API response errors" do
-        let(:error_response) { instance_double("HTTParty::Response", success?: false, code: code) }
+        let(:error_response) { instance_double(HTTParty::Response, success?: false, code: code) }
 
         [404, 401, 500, 403].each do |status_code|
           context "with #{status_code} status code" do
@@ -100,7 +100,7 @@ RSpec.describe ClientSearchCli::ApiClient do
 
       it "raises an error for non-existent file" do
         client = described_class.new("/nonexistent/path/to/file.json")
-        expect { client.fetch_clients }.to raise_error(ClientSearchCli::Error, /File not found/)
+        expect { client.fetch_clients }.to raise_error(ClientSearch::Error, /File not found/)
       end
 
       it "raises an error for invalid JSON" do
@@ -110,7 +110,7 @@ RSpec.describe ClientSearchCli::ApiClient do
           file.close
 
           client = described_class.new(file.path)
-          expect { client.fetch_clients }.to raise_error(ClientSearchCli::Error, /Invalid JSON format/)
+          expect { client.fetch_clients }.to raise_error(ClientSearch::Error, /Invalid JSON format/)
         ensure
           file.unlink
         end

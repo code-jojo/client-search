@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ClientSearchCli
+module ClientSearch
   # Represents a client entity with identification and contact information
   # Provides methods for initialization from various data sources and serialization
   class Client

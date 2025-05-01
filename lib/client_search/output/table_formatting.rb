@@ -2,7 +2,7 @@
 
 require "terminal-table"
 
-module ClientSearchCli
+module ClientSearch
   module Output
     # Module for formatting and displaying data in tables
     module TableFormatting

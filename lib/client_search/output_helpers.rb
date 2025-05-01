@@ -5,7 +5,7 @@ require "json"
 require_relative "output/table_formatting"
 require_relative "output/formatting_helpers"
 
-module ClientSearchCli
+module ClientSearch
   # Helper module for displaying and formatting client data in various output formats
   # Provides methods for rendering data as tables, plain text, and JSON
   module OutputHelpers

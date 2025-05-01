@@ -5,7 +5,7 @@ require "json"
 require_relative "api/response_handling"
 require_relative "api/client_search"
 
-module ClientSearchCli
+module ClientSearch
   # API client for interacting with the client search service
   # Handles fetching clients and searching by various criteria
   class ApiClient
@@ -29,7 +29,7 @@ module ClientSearchCli
       end
     rescue Errno::ECONNREFUSED, Timeout::Error, HTTParty::Error => e
       handle_network_error(e)
-    rescue ClientSearchCli::Error
+    rescue Error
       raise
     rescue StandardError => e
       puts "Error: #{e.message}"
@@ -88,13 +88,13 @@ module ClientSearchCli
     end
 
     def fetch_from_file
-      raise ClientSearchCli::Error, "File not found: #{@custom_file}" unless File.exist?(@custom_file)
+      raise Error, "File not found: #{@custom_file}" unless File.exist?(@custom_file)
 
       begin
         data = JSON.parse(File.read(@custom_file))
         transform_client_data(data)
       rescue JSON::ParserError
-        raise ClientSearchCli::Error, "Invalid JSON format in file: #{@custom_file}"
+        raise Error, "Invalid JSON format in file: #{@custom_file}"
       end
     end
   end
