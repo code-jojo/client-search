@@ -124,7 +124,8 @@ RSpec.describe ClientSearch::ApiClient do
         { "id" => 1, "full_name" => "John Doe", "email" => "john@example.com", "phone" => "123-456-7890" },
         { "id" => 2, "full_name" => "Jane Smith", "email" => "jane@example.com", "phone" => "987-654-3210" },
         { "id" => 3, "full_name" => "John-Paul Jones", "email" => "jp@example.com", "phone" => "555-555-5555" },
-        { "id" => 4, "full_name" => "María Rodríguez", "email" => "maria@example.com", "phone" => "111-222-3333" }
+        { "id" => 4, "full_name" => "María Rodríguez", "email" => "maria@example.com", "phone" => "111-222-3333" },
+        { "id" => 5, "full_name" => "Alex Johnson", "email" => "alex@example.com", "phone" => "222-333-4444" }
       ]
     end
 
@@ -137,6 +138,21 @@ RSpec.describe ClientSearch::ApiClient do
       expect(results).to be_an(Array)
       expect(results.size).to eq(2)
       expect(results.map { |c| c["full_name"] }).to include("John Doe", "John-Paul Jones")
+    end
+
+    it "prioritizes exact full name matches" do
+      results = api_client.search_clients_by_field("John Doe", "full_name")
+      expect(results).to be_an(Array)
+      expect(results.size).to eq(1)
+      expect(results.first["full_name"]).to eq("John Doe")
+      expect(results.map { |c| c["full_name"] }).not_to include("Alex Johnson")
+    end
+
+    it "matches all parts of a full name search" do
+      results = api_client.search_clients_by_field("John Paul", "full_name")
+      expect(results).to be_an(Array)
+      expect(results.size).to eq(1)
+      expect(results.first["full_name"]).to eq("John-Paul Jones")
     end
 
     it "searches by email field" do
