@@ -7,21 +7,21 @@ module ClientSearchCli
   # Handles fetching clients and searching by various criteria
   class ApiClient
     include HTTParty
-    base_uri ENV["SHIFTCARE_API_URL"] || "https://appassets02.shiftcare.com/manual"
+    base_uri ENV.fetch("SHIFTCARE_API_URL", "https://appassets02.shiftcare.com/manual")
     format :json
 
     # Fetch clients from the API
     def fetch_clients
       response = self.class.get("/clients.json")
       handle_response(response)
-    rescue Errno::ECONNREFUSED
-      puts "Error: Connection refused"
-      nil
-    rescue Timeout::Error
-      puts "Error: Network timeout"
-      nil
-    rescue HTTParty::Error
-      puts "Error: API returned invalid data"
+    rescue Errno::ECONNREFUSED, Timeout::Error, HTTParty::Error => e
+      error_message = case e
+                      when Errno::ECONNREFUSED then "Connection refused"
+                      when Timeout::Error then "Network timeout"
+                      when HTTParty::Error then "API returned invalid data"
+                      else e.message
+                      end
+      puts "Error: #{error_message}"
       nil
     rescue StandardError => e
       puts "Error: #{e.message}"
@@ -33,24 +33,21 @@ module ClientSearchCli
       return [] if name.nil? || name.strip.empty?
 
       search_query = name.downcase.strip
-      # Split the search query into parts
       search_parts = search_query.split(/\s+/)
 
       clients = fetch_clients
+      return [] unless clients
+
       filter_clients_by_name(clients, search_query, search_parts)
     end
 
     # Find duplicate clients based on email
     def find_duplicate_emails
-      clients = fetch_clients.map { |client| Client.new(client) }
+      clients = fetch_clients&.map { |client| Client.new(client) }
+      return {} unless clients
 
-      # Group clients by email
-      clients_by_email = clients.group_by(&:email)
-
-      # Filter out nil/empty emails and groups with only one client
-      clients_by_email.select do |email, clients_with_email|
-        email && !email.empty? && clients_with_email.length > 1
-      end
+      clients_by_email = group_clients_by_email(clients)
+      filter_duplicates(clients_by_email)
     end
 
     private
@@ -98,27 +95,37 @@ module ClientSearchCli
     end
 
     def handle_error(response)
-      case response.code
-      when 404
-        puts "Error: Resource not found (404)"
-      when 401
-        puts "Error: Unauthorized access (401)"
-      when 403
-        puts "Error: Forbidden access (403)"
-      when 500
-        puts "Error: Server error (500)"
-      else
-        puts "Error: API Error: #{response.code} - #{response.message}"
-      end
+      message = case response.code
+                when 404 then "Resource not found (404)"
+                when 401 then "Unauthorized access (401)"
+                when 403 then "Forbidden access (403)"
+                when 500 then "Server error (500)"
+                else "API Error: #{response.code} - #{response.message}"
+                end
+      puts "Error: #{message}"
     end
 
     def transform_client_data(clients)
       clients = [clients] unless clients.is_a?(Array)
+      clients.map { |client| client.transform_keys(&:to_s) }
+    end
 
-      clients.map do |client|
-        client_data = client.transform_keys(&:to_s)
-        client_data
+    def group_clients_by_email(clients)
+      clients.each_with_object({}) do |client, result|
+        next unless valid_email?(client.email)
+
+        email_key = client.email.downcase
+        result[email_key] ||= []
+        result[email_key] << client
       end
+    end
+
+    def filter_duplicates(grouped_clients)
+      grouped_clients.select { |_, clients_group| clients_group.length > 1 }
+    end
+
+    def valid_email?(email)
+      email && !email.empty?
     end
   end
 end

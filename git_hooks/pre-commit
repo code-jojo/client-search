@@ -1,0 +1,21 @@
+#!/bin/sh
+
+echo "Running Rubocop pre-commit hook..."
+bundle exec rubocop -a
+
+# Rubocop returns 0 if no issues, non-zero otherwise
+if [ $? -ne 0 ]; then
+  echo "Rubocop detected issues. Please fix them before committing."
+  exit 1
+fi
+
+echo "Running tests..."
+bundle exec rspec
+
+# RSpec returns 0 if all tests pass, non-zero otherwise
+if [ $? -ne 0 ]; then
+  echo "Tests failed. Please fix failing tests before committing."
+  exit 1
+fi
+
+exit 0 

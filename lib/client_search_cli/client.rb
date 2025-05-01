@@ -14,8 +14,7 @@ module ClientSearchCli
     end
 
     def name
-      name = full_name.to_s.strip
-      name.empty? && email ? email : name
+      full_name.to_s.strip.then { |n| n.empty? && email ? email : n }
     end
 
     def to_h

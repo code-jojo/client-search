@@ -4,7 +4,7 @@ A command-line interface for searching client data.
 
 ## Overview
 
-This CLI tool provides a simple, efficient way to search for client information using the API. It's designed for users who prefer command-line workflows and need to quickly find client details without accessing the web interface.
+This CLI tool provides a simple, efficient way to search for client information using the API.
 
 ## Setup and Installation
 
@@ -25,9 +25,14 @@ This CLI tool provides a simple, efficient way to search for client information 
    bundle install
    ```
 
-3. Build and install the gem:
+3. Set up Git hooks (optional but recommended for development):
    ```
-   gem build client-search-cli.gemspec
+   bin/setup_git_hooks
+   ```
+   This installs hooks that run Rubocop and tests before each commit to ensure code quality and functionality.
+
+4. Build and install the gem:
+   ```   gem build client-search-cli.gemspec
    gem install client-search-cli-[VERSION].gem
    ```
 
@@ -45,6 +50,14 @@ Search for clients by name:
 client_search search "John Doe"
 ```
 
+### Duplicate Email Detection
+Identify and list duplicate email records:
+```
+client_search duplicates
+```
+
+This command finds duplicate emails in the dataset.
+
 ### Output Formats
 You can specify different output formats:
 
@@ -57,19 +70,6 @@ You can specify different output formats:
   ```
   client_search search "John Doe" --format=json
   ```
-
-- CSV format:
-  ```
-  client_search search "John Doe" --format=csv
-  ```
-
-### Duplicate Email Detection
-Identify and list duplicate email records:
-```
-client_search duplicates
-```
-
-This command finds duplicate emails in the dataset.
 
 ### Version Information
 Display the current version:

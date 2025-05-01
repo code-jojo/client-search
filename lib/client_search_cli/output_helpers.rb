@@ -28,12 +28,12 @@ module ClientSearchCli
     # Display data in JSON format
     def display_as_json(data, is_duplicate: false)
       with_dependencies(:json) do
-        if is_duplicate
-          formatted_data = data.transform_values { |clients| clients.map(&:to_h) }
-          puts JSON.pretty_generate(formatted_data)
-        else
-          puts JSON.pretty_generate(data.map(&:to_h))
-        end
+        formatted_data = if is_duplicate
+                           data.transform_values { |clients| clients.map(&:to_h) }
+                         else
+                           data.map(&:to_h)
+                         end
+        puts JSON.pretty_generate(formatted_data)
       end
     end
 
@@ -70,11 +70,7 @@ module ClientSearchCli
     end
 
     def display_as_plain_text(data, is_duplicate: false)
-      if is_duplicate
-        display_duplicate_groups_plain_text(data)
-      else
-        display_clients_as_plain_text(data)
-      end
+      is_duplicate ? display_duplicate_groups_plain_text(data) : display_clients_as_plain_text(data)
     end
 
     def display_clients_as_plain_text(clients)

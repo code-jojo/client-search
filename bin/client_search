@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+########################################################################
+# NOTE:
+# This file serves as a direct entry point for debugging purposes.
+# We require the lib/client_search_cli file directly rather than using
+# exe/client_search to ensure proper debugger functionality.
+#
+# This approach resolves an issue where the debugger would not activate
+# when running through exe/client_search.
+########################################################################
+
+require_relative "../lib/client_search_cli"
+
+# Start the CLI
+ClientSearchCli::CLI.start(ARGV)

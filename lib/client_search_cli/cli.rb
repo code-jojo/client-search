@@ -22,13 +22,7 @@ module ClientSearchCli
 
       begin
         clients = search_service.search_by_name(name)
-
-        case options[:format].downcase
-        when "json"
-          display_as_json(clients)
-        else
-          display_as_table(clients)
-        end
+        display_results(clients, options[:format])
       rescue Error => e
         error_message(e)
       end
@@ -41,13 +35,7 @@ module ClientSearchCli
 
       begin
         duplicate_groups = search_service.find_duplicate_emails
-
-        case options[:format].downcase
-        when "json"
-          display_as_json(duplicate_groups, is_duplicate: true)
-        else
-          display_as_table(duplicate_groups, is_duplicate: true)
-        end
+        display_results(duplicate_groups, options[:format], is_duplicate: true)
       rescue Error => e
         error_message(e)
       end
@@ -59,6 +47,15 @@ module ClientSearchCli
     end
 
     private
+
+    def display_results(data, format, is_duplicate: false)
+      case format.to_s.downcase
+      when "json"
+        display_as_json(data, is_duplicate: is_duplicate)
+      else
+        display_as_table(data, is_duplicate: is_duplicate)
+      end
+    end
 
     def error_message(exception)
       say "Error: #{exception.message}", :red
