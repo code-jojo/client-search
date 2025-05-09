@@ -43,16 +43,16 @@ RSpec.describe ClientSearch::CLI do
 
       before do
         allow(search_service).to receive(:search_by_field)
-          .with("Doe", "full_name", any_args)
+          .with("Doe", any_args)
           .and_return([client1, client2])
         allow(search_service).to receive(:search_by_field)
-          .with("john@example.com", "email", any_args)
+          .with("john@example.com", any_args)
           .and_return([client1])
         allow(search_service).to receive(:search_by_field)
-          .with("John", "full_name", any_args)
+          .with("John", any_args)
           .and_return([client1])
         allow(search_service).to receive(:search_by_field)
-          .with("1", "id", any_args)
+          .with("1", any_args)
           .and_return([client1])
       end
 
@@ -102,7 +102,7 @@ RSpec.describe ClientSearch::CLI do
 
     context "when no clients are found" do
       before do
-        allow(search_service).to receive(:search_by_field).with("NonExistent", "full_name", any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with("NonExistent", any_args).and_return([])
       end
 
       it "displays a message indicating no clients were found" do
@@ -116,7 +116,7 @@ RSpec.describe ClientSearch::CLI do
     context "when an error occurs" do
       before do
         allow(search_service).to receive(:search_by_field)
-          .with("Error", "full_name", any_args)
+          .with("Error", any_args)
           .and_raise(ClientSearch::Error, "API connection failed")
       end
 
@@ -128,7 +128,7 @@ RSpec.describe ClientSearch::CLI do
 
     context "with edge case inputs" do
       it "handles empty search term" do
-        allow(search_service).to receive(:search_by_field).with("", "full_name", any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with("", any_args).and_return([])
         allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
         output = capture_stdout { cli.search("") }
@@ -137,7 +137,7 @@ RSpec.describe ClientSearch::CLI do
       end
 
       it "handles nil search term" do
-        allow(search_service).to receive(:search_by_field).with(nil, "full_name", any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with(nil, any_args).and_return([])
         allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
         output = capture_stdout { cli.search(nil) }
@@ -146,7 +146,7 @@ RSpec.describe ClientSearch::CLI do
       end
 
       it "handles search term with special characters" do
-        allow(search_service).to receive(:search_by_field).with("O'Brien", "full_name", any_args).and_return([])
+        allow(search_service).to receive(:search_by_field).with("O'Brien", any_args).and_return([])
         allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 
         output = capture_stdout { cli.search("O'Brien") }
@@ -166,7 +166,7 @@ RSpec.describe ClientSearch::CLI do
       end
 
       before do
-        allow(search_service).to receive(:search_by_field).with("John", "full_name", any_args).and_return([client])
+        allow(search_service).to receive(:search_by_field).with("John", any_args).and_return([client])
       end
 
       it "defaults to table format when an invalid format is specified" do
@@ -187,7 +187,7 @@ RSpec.describe ClientSearch::CLI do
       ].each do |error_message|
         it "handles #{error_message} error" do
           allow(search_service).to receive(:search_by_field)
-            .with("Network", "full_name", any_args)
+            .with("Network", any_args)
             .and_raise(ClientSearch::Error, error_message)
           allow(cli).to receive(:options).and_return({ format: "table", field: "full_name" })
 

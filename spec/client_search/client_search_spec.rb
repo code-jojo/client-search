@@ -48,11 +48,11 @@ RSpec.describe ClientSearch::ClientSearch do
         expect(results).to be_empty
       end
 
-      it "passes options to the API client" do
-        options = { case_sensitive: true }
-        expect(api_client).to receive(:search_clients_by_field).with("John", "full_name").and_return([mock_clients[0]])
+      it "handles nil client data" do
+        allow(api_client).to receive(:search_clients_by_field).with("John", "full_name").and_return([])
 
-        search_service.search_by_field("John", "full_name", options)
+        results = search_service.search_by_field("John", "full_name")
+        expect(results).to be_empty
       end
     end
 

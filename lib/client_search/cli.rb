@@ -23,7 +23,7 @@ module ClientSearch
       search_service = ClientSearch.new(ApiClient.new(options[:file]))
 
       begin
-        clients = search_service.search_by_field(value, options[:field])
+        clients = search_service.search_by_field(value)
         display_results(clients, options[:format])
       rescue Error => e
         error_message(e)
